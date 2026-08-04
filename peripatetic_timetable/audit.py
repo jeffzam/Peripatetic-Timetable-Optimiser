@@ -27,6 +27,11 @@ class AuditIssue:
     day: str = ""
 
 
+def teacher_has_full_name(name: str) -> bool:
+    """Return whether a teacher name contains at least a first name and surname."""
+    return len([part for part in name.strip().split() if part]) >= 2
+
+
 def audit_timetable(
     timetable: Timetable, policy: SchedulingPolicy = DEFAULT_POLICY
 ) -> list[AuditIssue]:
@@ -47,6 +52,16 @@ def audit_timetable(
         )
 
     for teacher in timetable.teachers:
+        if not teacher_has_full_name(teacher):
+            issues.append(
+                AuditIssue(
+                    Severity.ERROR,
+                    "INCOMPLETE_TEACHER_NAME",
+                    "Teacher name is incomplete",
+                    f"{teacher} needs a first name and surname. Open Staff and use Rename.",
+                    teacher=teacher,
+                )
+            )
         missing = tuple(day for day in DAYS if not timetable.schools_for_teacher(teacher, day))
         if missing:
             issues.append(

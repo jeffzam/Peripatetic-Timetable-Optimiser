@@ -17,6 +17,7 @@ venv/
 user_data.json
 user_data.json.bak
 user_data.json.tmp
+user_data_history/
 *.exe
 *.zip
 peripatetic_timetable_v2_6_1_audit_restrictions_restore_engine_package/

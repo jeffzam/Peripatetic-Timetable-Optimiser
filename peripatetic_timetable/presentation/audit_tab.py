@@ -18,7 +18,7 @@ class AuditTab(ttk.Frame):
             heading,
             text=(
                 "Checks daily school coverage, double-bookings, PE/RSP educator-day "
-                "capacity, and resilience in larger schools."
+                "capacity, staff names, and resilience in larger schools."
             ),
             style="Muted.TLabel",
         ).pack(anchor="w", pady=(3, 0))

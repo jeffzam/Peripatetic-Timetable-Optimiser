@@ -1,6 +1,6 @@
 import unittest
 
-from peripatetic_timetable.audit import Severity, audit_timetable
+from peripatetic_timetable.audit import Severity, audit_timetable, teacher_has_full_name
 from peripatetic_timetable.policy import DEFAULT_POLICY
 from peripatetic_timetable.repository import TimetableRepository
 
@@ -27,6 +27,14 @@ class AuditTests(unittest.TestCase):
                 for item in issues
             )
         )
+
+    def test_single_name_teacher_is_flagged_for_correction(self):
+        issues = audit_timetable(self.timetable)
+        issue = next(item for item in issues if item.code == "INCOMPLETE_TEACHER_NAME")
+        self.assertEqual(issue.teacher, "Alisichia")
+        self.assertEqual(issue.severity, Severity.ERROR)
+        self.assertFalse(teacher_has_full_name("Alisichia"))
+        self.assertTrue(teacher_has_full_name("Example Teacher"))
 
 
 if __name__ == "__main__":

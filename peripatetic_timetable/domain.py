@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import copy
 import unicodedata
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Iterable
 
 from .config import DAYS
@@ -105,6 +105,66 @@ class Timetable:
     @property
     def school_names(self) -> list[str]:
         return [school.name for school in self.schools]
+
+    def subjects_for_teacher(self, teacher: str) -> tuple[str, ...]:
+        """Return the subjects taught by a teacher in a stable display order."""
+        return tuple(
+            sorted(
+                {item.subject for item in self.assignments_for(teacher=teacher)},
+                key=str.casefold,
+            )
+        )
+
+    def rename_teacher(self, current_name: str, new_name: str) -> int:
+        """Rename a teacher consistently across placements, rules, locks, and notes."""
+        current_key = normalise(current_name)
+        clean_name = new_name.strip()
+        changed = 0
+        for assignment in self.assignments:
+            if normalise(assignment.teacher) == current_key:
+                assignment.teacher = clean_name
+                changed += 1
+        self.restrictions = [
+            replace(item, teacher=clean_name)
+            if normalise(item.teacher) == current_key
+            else item
+            for item in self.restrictions
+        ]
+        self.locks = [
+            replace(item, teacher=clean_name)
+            if normalise(item.teacher) == current_key
+            else item
+            for item in self.locks
+        ]
+        self.weekly_rules = [
+            replace(item, teacher=clean_name)
+            if normalise(item.teacher) == current_key
+            else item
+            for item in self.weekly_rules
+        ]
+        self.staff_notes = [
+            replace(item, name=clean_name)
+            if normalise(item.name) == current_key
+            else item
+            for item in self.staff_notes
+        ]
+        return changed
+
+    def remove_teacher(self, teacher: str) -> int:
+        """Remove a departed teacher's placements and teacher-specific rules."""
+        teacher_key = normalise(teacher)
+        previous_count = len(self.assignments)
+        self.assignments = [
+            item for item in self.assignments if normalise(item.teacher) != teacher_key
+        ]
+        self.restrictions = [
+            item for item in self.restrictions if normalise(item.teacher) != teacher_key
+        ]
+        self.locks = [item for item in self.locks if normalise(item.teacher) != teacher_key]
+        self.weekly_rules = [
+            item for item in self.weekly_rules if normalise(item.teacher) != teacher_key
+        ]
+        return previous_count - len(self.assignments)
 
     def school(self, name: str) -> School | None:
         key = normalise(name)

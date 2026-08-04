@@ -1,8 +1,10 @@
+from datetime import datetime
 from tkinter import ttk
 
 from ..config import DAYS
 from ..domain import Timetable
 from ..reports import coverage_report, movement_matrix
+from ..repository import BASELINE_SNAPSHOT_ID, HistorySnapshot
 
 class MovementTab(ttk.Frame):
     def __init__(self, parent):
@@ -42,14 +44,66 @@ class CoverageTab(ttk.Frame):
             ), tags=("issue" if row.missing_days or row.conflict_days else "complete",))
 
 class ChangeLogTab(ttk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, restore_callback):
         super().__init__(parent, style="App.TFrame")
+        self.restore_callback = restore_callback
+        self._snapshot_by_label: dict[str, str] = {}
+
+        restore = ttk.Frame(self, style="Card.TFrame", padding=14)
+        restore.pack(fill="x", padx=8, pady=(8, 4))
+        ttk.Label(restore, text="Restore an approved timetable", style="Title.TLabel").grid(
+            row=0, column=0, columnspan=2, sticky="w"
+        )
+        ttk.Label(
+            restore,
+            text=(
+                "Choose the original baseline or any dated approval. Your current timetable "
+                "is preserved before the selected version is restored."
+            ),
+            style="Muted.TLabel",
+        ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(3, 9))
+        self.version = ttk.Combobox(restore, state="readonly", width=62)
+        self.version.grid(row=2, column=0, sticky="ew", padx=(0, 10))
+        ttk.Button(
+            restore,
+            text="Restore selected version",
+            style="Warning.TButton",
+            command=self._restore_selected,
+        ).grid(row=2, column=1, sticky="e")
+        restore.columnconfigure(0, weight=1)
+
+        heading = ttk.Frame(self, style="App.TFrame")
+        heading.pack(fill="x", padx=10, pady=(8, 0))
+        ttk.Label(heading, text="Detailed change log", style="Section.TLabel").pack(side="left")
         self.tree = ttk.Treeview(self, columns=("version", "note"), show="headings")
         self.tree.heading("version", text="Version"); self.tree.column("version", width=110, anchor="center")
         self.tree.heading("note", text="Change"); self.tree.column("note", width=900)
-        self.tree.pack(fill="both", expand=True, padx=8, pady=8)
+        self.tree.pack(fill="both", expand=True, padx=8, pady=(4, 8))
 
-    def show(self, timetable: Timetable):
+    @staticmethod
+    def _dated_label(snapshot: HistorySnapshot) -> str:
+        try:
+            date = datetime.fromisoformat(snapshot.created_at).strftime("%d %b %Y, %H:%M")
+        except ValueError:
+            date = snapshot.created_at
+        return f"{date} — {snapshot.label}"
+
+    def _restore_selected(self) -> None:
+        label = self.version.get()
+        snapshot_id = self._snapshot_by_label.get(label)
+        if snapshot_id:
+            self.restore_callback(snapshot_id, label)
+
+    def show(self, timetable: Timetable, snapshots: list[HistorySnapshot]):
+        baseline_label = "29 Jul 2026 — Original verified baseline"
+        labels = [self._dated_label(snapshot) for snapshot in snapshots]
+        self._snapshot_by_label = {
+            baseline_label: BASELINE_SNAPSHOT_ID,
+            **{label: snapshot.snapshot_id for label, snapshot in zip(labels, snapshots)},
+        }
+        self.version["values"] = (baseline_label, *labels)
+        if self.version.get() not in self.version["values"]:
+            self.version.set(labels[0] if labels else baseline_label)
         self.tree.delete(*self.tree.get_children())
         for item in reversed(timetable.change_log):
             self.tree.insert("", "end", values=(item.version, item.note))
