@@ -1,45 +1,59 @@
-# Peripatetic Timetable Optimiser
+# Peripatetic Timetable Planner
 
-A desktop application for controlled rebalancing of peripatetic teacher timetables. The canonical timetable remains the starting point; changes are made through validated same-day, same-subject swaps.
+A clean Python desktop application for managing St Nicholas College's peripatetic
+teacher timetable and testing full or partial transfers without changing the
+approved starting timetable.
 
-## Features
+The canonical data was verified against **Time table 29th July .doc** for the
+2026/2027 scholastic year. The application always works on a separate local copy.
 
-- Batch removal and rebalancing across multiple teachers and days
-- PE and PE/RSP compatibility
-- One teacher, one school per day validation
-- Teacher locks and day-specific school restrictions
-- EXACT, MIN and MAX weekly school-frequency rules
-- Preview before applying, plus original timetable restoration
-- Teacher movement and Monday-to-Friday coverage audits
-- CSV and formatted Excel export
+## What the first clean version does
 
-## Project structure
+- Presents the six-school timetable in a clear school-by-day grid.
+- Audits whether every active teacher has a school on every weekday.
+- Detects teachers assigned to more than one school on the same day.
+- Plans **full transfers** for every day a teacher serves at a selected school.
+- Plans **partial transfers** for selected days only.
+- Keeps one destination school for each complete transfer request.
+- Finds subject-compatible counterpart teachers and explains every proposed swap.
+- Treats PE and PE/RSP as compatible for transfer-cover purposes.
+- Checks PE/RSP educator-day capacity from school class totals.
+- Supports fixed teacher/day/school locks, excluded schools, and weekly frequency rules.
+- Generates a preview before any change can be saved.
+- Exports the timetable, teacher movement, audit, and history to Excel or CSV.
 
-- `peripatetic_timetable/scheduler.py` - rebalancing and validation engine
-- `peripatetic_timetable/storage.py` - safe JSON persistence
-- `peripatetic_timetable/audit.py` - movement and coverage reporting
-- `peripatetic_timetable/exporters.py` - CSV and Excel output
-- `peripatetic_timetable/ui.py` - Tkinter desktop interface
-- `peripatetic_timetable/data/baseline.json` - canonical timetable
-- `tests/` - scheduler regression tests
+The source timetable currently contains one visible exception: Alisichia is listed
+in both Baħrija and Rabat on Thursday and has no school on Wednesday. The application
+shows this rather than silently changing the source document.
 
 ## Run
 
-Python 3.10 or newer is required.
+Python 3.10 or newer is required. Its optional **Tcl/Tk and IDLE** component must
+also be installed for the desktop interface.
 
-    python -m pip install -r requirements.txt
-    python run.py
+```text
+python -m pip install -r requirements.txt
+python run.py
+```
 
-The app creates `user_data.json` in the working directory. This is ignored by Git because it contains local timetable changes.
+The working copy is stored as `user_data.json`. The protected starting data remains
+in `peripatetic_timetable/data/baseline.json`.
 
-## Test
+## Code structure
 
-    python -m unittest discover -s tests -v
+- `domain.py` — timetable data and structural validation
+- `policy.py` — PE/RSP workload and subject-compatibility policy
+- `audit.py` — explainable coverage and capacity checks
+- `optimizer.py` — full and partial transfer search
+- `repository.py` — protected baseline and atomic local saving
+- `reports.py` and `exports.py` — operational reports and exports
+- `presentation/` — independent desktop screens and visual styling
 
-## Data and privacy
+## Tests
 
-Passwords, API keys, environment files, exports, and local working data are not tracked. Before using real personnel data, confirm that repository visibility and access controls match your organisation's privacy requirements.
+```text
+python -m unittest discover -s tests -v
+```
 
-## History
-
-This clean v3 rewrite consolidates the prototype sequence through v2.6.1: timetable visualisation, PE/RSP planning, same-day conflict prevention, canonical baseline swaps, automatic batch rebalancing, restrictions, locks, weekly rules, auditing, and restoration.
+Personnel data stays local unless a user deliberately publishes it. Local working
+copies, backups, exports, credentials, executables, and archives are ignored by Git.
