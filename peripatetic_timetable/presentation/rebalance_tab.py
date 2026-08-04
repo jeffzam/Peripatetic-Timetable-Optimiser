@@ -11,6 +11,12 @@ from .theme import COLORS
 
 
 ANY_SCHOOL = "Any suitable school"
+ALL_SUBJECTS = "All subjects"
+
+
+def teacher_label(teacher: str, subjects: tuple[str, ...]) -> str:
+    """Build an informative name for teacher selection controls."""
+    return f"{teacher} ({' / '.join(subjects)})" if subjects else teacher
 
 
 class TransferTab(ttk.Frame):
@@ -18,11 +24,13 @@ class TransferTab(ttk.Frame):
         super().__init__(parent, style="App.TFrame")
         self.callbacks = callbacks
         self.day_vars = {day: tk.BooleanVar() for day in DAYS}
+        self._teacher_subjects: dict[str, tuple[str, ...]] = {}
+        self._teacher_by_label: dict[str, str] = {}
         self._build()
 
     def _build(self) -> None:
-        intro = ttk.Frame(self, style="Card.TFrame", padding=(18, 14))
-        intro.pack(fill="x", padx=10, pady=(10, 6))
+        intro = ttk.Frame(self, style="Card.TFrame", padding=(12, 8))
+        intro.pack(fill="x", padx=6, pady=(6, 3))
         ttk.Label(intro, text="Plan teacher transfers", style="Title.TLabel").pack(anchor="w")
         ttk.Label(
             intro,
@@ -33,13 +41,14 @@ class TransferTab(ttk.Frame):
             style="Muted.TLabel",
         ).pack(anchor="w", pady=(3, 0))
 
-        form = ttk.Frame(self, style="Card.TFrame", padding=16)
-        form.pack(fill="x", padx=10, pady=6)
+        form = ttk.Frame(self, style="Card.TFrame", padding=10)
+        form.pack(fill="x", padx=6, pady=3)
         labels = (
             ("Transfer type", 0),
-            ("Teacher", 1),
-            ("Current school", 2),
-            ("Preferred destination", 3),
+            ("Subject", 1),
+            ("Teacher", 2),
+            ("Current school", 3),
+            ("Preferred destination", 4),
         )
         for label, column in labels:
             ttk.Label(form, text=label, style="Field.TLabel").grid(
@@ -52,21 +61,29 @@ class TransferTab(ttk.Frame):
             width=18,
         )
         self.transfer_type.set(TransferType.PARTIAL.value)
-        self.teacher = ttk.Combobox(form, state="readonly", width=25)
+        self.subject = ttk.Combobox(form, state="readonly", width=14)
+        self.teacher = ttk.Combobox(form, state="readonly", width=30)
         self.source = ttk.Combobox(form, state="readonly", width=19)
         self.destination = ttk.Combobox(form, state="readonly", width=22)
         for column, widget in enumerate(
-            (self.transfer_type, self.teacher, self.source, self.destination)
+            (
+                self.transfer_type,
+                self.subject,
+                self.teacher,
+                self.source,
+                self.destination,
+            )
         ):
             widget.grid(row=1, column=column, sticky="ew", padx=(0, 12))
         self.teacher.bind("<<ComboboxSelected>>", lambda _event: self.callbacks["teacher_changed"]())
+        self.subject.bind("<<ComboboxSelected>>", lambda _event: self._subject_changed())
         self.transfer_type.bind("<<ComboboxSelected>>", lambda _event: self._set_day_state())
 
         ttk.Label(form, text="Days for a partial transfer", style="Field.TLabel").grid(
-            row=2, column=0, columnspan=2, sticky="w", pady=(14, 4)
+            row=2, column=0, columnspan=3, sticky="w", pady=(8, 3)
         )
         day_row = ttk.Frame(form, style="Card.TFrame")
-        day_row.grid(row=3, column=0, columnspan=2, sticky="w")
+        day_row.grid(row=3, column=0, columnspan=3, sticky="w")
         self.day_buttons = []
         for day in DAYS:
             button = ttk.Checkbutton(day_row, text=day[:3], variable=self.day_vars[day])
@@ -74,21 +91,21 @@ class TransferTab(ttk.Frame):
             self.day_buttons.append(button)
 
         ttk.Label(form, text="Additional excluded schools", style="Field.TLabel").grid(
-            row=2, column=2, sticky="w", pady=(14, 4)
+            row=2, column=3, sticky="w", pady=(8, 3)
         )
         self.excluded = ttk.Entry(form, width=28)
-        self.excluded.grid(row=3, column=2, sticky="ew", padx=(0, 12))
+        self.excluded.grid(row=3, column=3, sticky="ew", padx=(0, 12))
         ttk.Button(
             form,
             text="Add request",
             style="Primary.TButton",
             command=self.callbacks["add"],
-        ).grid(row=3, column=3, sticky="e")
-        for column in range(4):
+        ).grid(row=3, column=4, sticky="e")
+        for column in range(5):
             form.columnconfigure(column, weight=1)
 
         actions = ttk.Frame(self, style="App.TFrame")
-        actions.pack(fill="x", padx=10, pady=6)
+        actions.pack(fill="x", padx=6, pady=3)
         ttk.Button(
             actions,
             text="Remove selected",
@@ -116,64 +133,78 @@ class TransferTab(ttk.Frame):
         )
         self.apply_button.pack(side="right", padx=7)
 
-        split = ttk.Panedwindow(self, orient="vertical")
-        split.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        queue = ttk.Frame(split, style="Card.TFrame", padding=12)
-        result = ttk.Frame(split, style="Card.TFrame", padding=12)
-        split.add(queue, weight=1)
-        split.add(result, weight=2)
-        ttk.Label(queue, text="Transfer request queue", style="Section.TLabel").pack(
-            anchor="w", pady=(0, 7)
+        output = ttk.Frame(self, style="App.TFrame")
+        output.pack(fill="both", expand=True, padx=6, pady=(0, 6))
+        output.columnconfigure(0, weight=1, uniform="transfer-output")
+        output.columnconfigure(1, weight=1, uniform="transfer-output")
+        output.rowconfigure(0, weight=1)
+        queue = ttk.Frame(output, style="Card.TFrame", padding=(8, 6))
+        result = ttk.Frame(output, style="Card.TFrame", padding=(8, 6))
+        queue.grid(row=0, column=0, sticky="nsew", padx=(0, 3))
+        result.grid(row=0, column=1, sticky="nsew", padx=(3, 0))
+
+        queue_heading = ttk.Frame(queue, style="Card.TFrame")
+        queue_heading.pack(fill="x", pady=(0, 5))
+        ttk.Label(queue_heading, text="Transfer request queue", style="Section.TLabel").pack(
+            side="left"
         )
+        self.queue_count = ttk.Label(queue_heading, text="0 requests", style="Muted.TLabel")
+        self.queue_count.pack(side="right")
         self.request_tree = ttk.Treeview(
             queue,
             columns=("type", "teacher", "source", "days", "destination", "excluded"),
             show="headings",
-            height=5,
+            height=8,
+            style="Compact.Treeview",
         )
         for column, label, width in (
-            ("type", "Type", 125),
-            ("teacher", "Teacher", 210),
-            ("source", "From", 135),
-            ("days", "Days", 220),
-            ("destination", "Preferred destination", 170),
-            ("excluded", "Excluded", 220),
+            ("type", "Type", 90),
+            ("teacher", "Teacher", 125),
+            ("source", "From", 75),
+            ("days", "Days", 105),
+            ("destination", "Destination", 115),
+            ("excluded", "Excluded", 85),
         ):
             self.request_tree.heading(column, text=label)
             self.request_tree.column(column, width=width)
         self.request_tree.pack(fill="both", expand=True)
 
-        ttk.Label(result, text="Proposed swaps", style="Section.TLabel").pack(
-            anchor="w", pady=(0, 7)
+        result_heading = ttk.Frame(result, style="Card.TFrame")
+        result_heading.pack(fill="x", pady=(0, 5))
+        ttk.Label(result_heading, text="Proposed swaps", style="Section.TLabel").pack(
+            side="left"
         )
+        self.result_count = ttk.Label(result_heading, text="0 swaps", style="Muted.TLabel")
+        self.result_count.pack(side="right")
         self.change_tree = ttk.Treeview(
             result,
             columns=("number", "teacher", "day", "source", "target", "swap", "score"),
             show="headings",
-            height=5,
+            height=6,
+            style="Compact.Treeview",
         )
         for column, label, width in (
-            ("number", "Request", 70),
-            ("teacher", "Teacher", 190),
-            ("day", "Day", 100),
-            ("source", "From", 125),
-            ("target", "To", 125),
-            ("swap", "Swap with", 190),
-            ("score", "Fit score", 80),
+            ("number", "#", 38),
+            ("teacher", "Teacher", 125),
+            ("day", "Day", 70),
+            ("source", "From", 72),
+            ("target", "To", 72),
+            ("swap", "Swap with", 125),
+            ("score", "Fit", 48),
         ):
             self.change_tree.heading(column, text=label)
             self.change_tree.column(column, width=width)
         self.change_tree.pack(fill="x")
         self.summary = tk.Text(
             result,
-            height=6,
+            height=4,
             wrap="word",
             relief="flat",
             bg="#F7F9FB",
             fg=COLORS["ink"],
-            padx=11,
-            pady=9,
-            font=("Segoe UI", 10),
+            padx=7,
+            pady=6,
+            font=("Segoe UI", 9),
         )
         self.summary.pack(fill="both", expand=True, pady=(8, 0))
         self.show_result((), "No preview generated.", False)
@@ -186,15 +217,54 @@ class TransferTab(ttk.Frame):
             for value in self.day_vars.values():
                 value.set(False)
 
-    def set_options(self, teachers: list[str], schools: list[str]) -> None:
-        self.teacher["values"] = teachers
+    def set_options(
+        self,
+        teacher_subjects: dict[str, tuple[str, ...]],
+        schools: list[str],
+    ) -> None:
+        selected_teacher = self.selected_teacher()
+        selected_subject = self.subject.get()
+        self._teacher_subjects = teacher_subjects
+        subjects = sorted(
+            {subject for values in teacher_subjects.values() for subject in values},
+            key=str.casefold,
+        )
+        self.subject["values"] = (ALL_SUBJECTS, *subjects)
+        self.subject.set(
+            selected_subject if selected_subject in self.subject["values"] else ALL_SUBJECTS
+        )
+        self._filter_teachers(selected_teacher)
         self.destination["values"] = (ANY_SCHOOL, *schools)
         if not self.destination.get():
             self.destination.set(ANY_SCHOOL)
 
+    def _subject_changed(self) -> None:
+        self._filter_teachers()
+        self.callbacks["teacher_changed"]()
+
+    def _filter_teachers(self, preferred_teacher: str = "") -> None:
+        subject = self.subject.get()
+        teachers = [
+            teacher
+            for teacher, subjects in self._teacher_subjects.items()
+            if subject == ALL_SUBJECTS or subject in subjects
+        ]
+        labels = [teacher_label(teacher, self._teacher_subjects[teacher]) for teacher in teachers]
+        self._teacher_by_label = dict(zip(labels, teachers))
+        self.teacher["values"] = labels
+        preferred_label = next(
+            (label for label, teacher in self._teacher_by_label.items() if teacher == preferred_teacher),
+            "",
+        )
+        self.teacher.set(preferred_label or (labels[0] if labels else ""))
+
+    def selected_teacher(self) -> str:
+        return self._teacher_by_label.get(self.teacher.get(), self.teacher.get())
+
     def set_source_options(self, schools: tuple[str, ...]) -> None:
+        selected = self.source.get()
         self.source["values"] = schools
-        self.source.set(schools[0] if schools else "")
+        self.source.set(selected if selected in schools else (schools[0] if schools else ""))
 
     def selected_days(self) -> tuple[str, ...]:
         return tuple(day for day, value in self.day_vars.items() if value.get())
@@ -207,6 +277,8 @@ class TransferTab(ttk.Frame):
         )
 
     def reset_builder(self) -> None:
+        self.transfer_type.set(TransferType.PARTIAL.value)
+        self._set_day_state()
         for value in self.day_vars.values():
             value.set(False)
         self.excluded.delete(0, "end")
@@ -223,6 +295,11 @@ class TransferTab(ttk.Frame):
                 if request.transfer_type == TransferType.FULL
                 else request.days
             )
+            day_text = (
+                "All weekdays"
+                if tuple(days) == DAYS
+                else ", ".join(day[:3] for day in days)
+            )
             self.request_tree.insert(
                 "",
                 "end",
@@ -230,11 +307,17 @@ class TransferTab(ttk.Frame):
                     request.transfer_type.value,
                     request.teacher,
                     request.source_school,
-                    ", ".join(day[:3] for day in days),
+                    day_text,
                     request.preferred_school or ANY_SCHOOL,
                     ", ".join(request.excluded_schools) or "—",
                 ),
             )
+        count = len(requests)
+        self.queue_count.configure(text=f"{count} request{'s' if count != 1 else ''}")
+        children = self.request_tree.get_children()
+        if children:
+            self.request_tree.selection_set(children[-1])
+            self.request_tree.see(children[-1])
 
     def show_result(
         self, changes: tuple[AppliedChange, ...], message: str, success: bool
@@ -254,6 +337,8 @@ class TransferTab(ttk.Frame):
                     item.score,
                 ),
             )
+        count = len(changes)
+        self.result_count.configure(text=f"{count} swap{'s' if count != 1 else ''}")
         self.summary.configure(state="normal")
         self.summary.delete("1.0", "end")
         self.summary.insert("end", message)

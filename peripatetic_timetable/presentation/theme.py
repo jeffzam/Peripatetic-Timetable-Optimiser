@@ -36,8 +36,9 @@ def configure_theme(root) -> None:
     style.configure("HeroTitle.TLabel", background=COLORS["navy"], foreground="white", font=("Segoe UI Semibold", 20))
     style.configure("HeroText.TLabel", background=COLORS["navy"], foreground="#D5E3EC", font=("Segoe UI", 10))
     style.configure("Metric.TLabel", background=COLORS["surface"], foreground=COLORS["navy"], font=("Segoe UI Semibold", 20))
+    style.configure("CompactMetric.TLabel", background=COLORS["surface"], foreground=COLORS["navy"], font=("Segoe UI Semibold", 16))
     style.configure("TNotebook", background=COLORS["background"], borderwidth=0)
-    style.configure("TNotebook.Tab", padding=(17, 10), font=("Segoe UI Semibold", 9), background="#E1E8ED")
+    style.configure("TNotebook.Tab", padding=(14, 8), font=("Segoe UI Semibold", 9), background="#E1E8ED")
     style.map(
         "TNotebook.Tab",
         background=[("selected", COLORS["surface"])],
@@ -58,6 +59,22 @@ def configure_theme(root) -> None:
         relief="flat",
         padding=(7, 7),
     )
+    style.configure(
+        "Compact.Treeview",
+        rowheight=23,
+        background=COLORS["surface"],
+        fieldbackground=COLORS["surface"],
+        bordercolor=COLORS["line"],
+        font=("Segoe UI", 8),
+    )
+    style.configure(
+        "Compact.Treeview.Heading",
+        background=COLORS["navy"],
+        foreground="white",
+        font=("Segoe UI Semibold", 8),
+        relief="flat",
+        padding=(4, 4),
+    )
     style.map(
         "Treeview",
         background=[("selected", "#DCECF7")],
@@ -74,7 +91,7 @@ def configure_theme(root) -> None:
             f"{name}.TButton",
             background=colour,
             foreground="white",
-            padding=(13, 8),
+            padding=(11, 6),
             font=("Segoe UI Semibold", 9),
             borderwidth=0,
         )

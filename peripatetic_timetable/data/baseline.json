@@ -41,7 +41,7 @@
     {
       "school": "Attard",
       "day": "Monday",
-      "subject": "PE",
+      "subject": "PE/RSP",
       "teacher": "Rebecca Bonello",
       "baseline": true
     },
@@ -83,7 +83,7 @@
     {
       "school": "Attard",
       "day": "Tuesday",
-      "subject": "PE",
+      "subject": "PE/RSP",
       "teacher": "Rebecca Bonello",
       "baseline": true
     },
@@ -125,7 +125,7 @@
     {
       "school": "Attard",
       "day": "Wednesday",
-      "subject": "PE",
+      "subject": "PE/RSP",
       "teacher": "Rebecca Bonello",
       "baseline": true
     },
@@ -153,7 +153,7 @@
     {
       "school": "Attard",
       "day": "Thursday",
-      "subject": "PE",
+      "subject": "PE/RSP",
       "teacher": "Rebecca Bonello",
       "baseline": true
     },
@@ -188,7 +188,7 @@
     {
       "school": "Attard",
       "day": "Friday",
-      "subject": "PE",
+      "subject": "PE/RSP",
       "teacher": "Rebecca Bonello",
       "baseline": true
     },
@@ -732,6 +732,10 @@
     {
       "version": "1.1",
       "note": "Corrected source reading: Alisichia serves Bahrija on Tuesday, Wednesday and Friday, and Rabat on Monday and Thursday."
+    },
+    {
+      "version": "1.2",
+      "note": "Standardised every physical-education assignment to the PE/RSP label."
     }
   ]
 }

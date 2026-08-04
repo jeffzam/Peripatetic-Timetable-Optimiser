@@ -80,25 +80,18 @@ class DashboardTab(ttk.Frame):
             command=lambda: self.open_page("audit"),
         ).pack(anchor="e")
 
-        ttk.Label(notes, text="Staffing notes from the source", style="Section.TLabel").pack(
+        ttk.Label(notes, text="Staffing notes", style="Section.TLabel").pack(
             anchor="w"
         )
-        self.note_tree = ttk.Treeview(
-            notes, columns=("name", "status", "note"), show="headings", height=9
-        )
-        for column, title, width in (
-            ("name", "Person / post", 175),
-            ("status", "Status", 120),
-            ("note", "Note", 280),
-        ):
-            self.note_tree.heading(column, text=title)
-            self.note_tree.column(column, width=width)
-        self.note_tree.pack(fill="both", expand=True, pady=(8, 10))
+        self.note_list = ttk.Frame(notes, style="Card.TFrame")
+        self.note_list.pack(fill="both", expand=True, pady=(8, 10))
+        self.note_labels: list[ttk.Label] = []
+        self.note_list.bind("<Configure>", self._resize_notes)
         ttk.Button(
             notes,
-            text="Plan a transfer",
+            text="Manage staff and notes",
             style="Success.TButton",
-            command=lambda: self.open_page("transfers"),
+            command=lambda: self.open_page("staff"),
         ).pack(anchor="e")
 
     def show(self, timetable: Timetable) -> None:
@@ -119,6 +112,34 @@ class DashboardTab(ttk.Frame):
             )
         if not issues:
             self.issue_tree.insert("", "end", values=("Ready", "No issues", "All active checks pass."))
-        self.note_tree.delete(*self.note_tree.get_children())
+        for widget in self.note_list.winfo_children():
+            widget.destroy()
+        self.note_labels.clear()
         for note in timetable.staff_notes:
-            self.note_tree.insert("", "end", values=(note.name, note.status, note.note))
+            card = ttk.Frame(self.note_list, style="Card.TFrame", padding=(7, 6))
+            card.pack(fill="x", pady=(0, 5))
+            heading = ttk.Frame(card, style="Card.TFrame")
+            heading.pack(fill="x")
+            ttk.Label(
+                heading,
+                text=note.name,
+                style="Card.TLabel",
+                font=("Segoe UI Semibold", 10),
+            ).pack(side="left")
+            ttk.Label(heading, text=note.status, style="Muted.TLabel").pack(
+                side="right", padx=(8, 0)
+            )
+            detail = ttk.Label(
+                card,
+                text=note.note or "No additional note.",
+                style="Card.TLabel",
+                justify="left",
+                anchor="w",
+            )
+            detail.pack(fill="x", pady=(3, 0))
+            self.note_labels.append(detail)
+
+    def _resize_notes(self, event) -> None:
+        wraplength = max(180, event.width - 28)
+        for label in self.note_labels:
+            label.configure(wraplength=wraplength)

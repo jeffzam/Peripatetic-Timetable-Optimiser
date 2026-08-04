@@ -3,18 +3,28 @@
 from __future__ import annotations
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from datetime import datetime
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
-from ..domain import ChangeLogEntry, TeacherLock, TeacherRestriction, WeeklyRule
+from ..audit import teacher_has_full_name
+from ..domain import (
+    ChangeLogEntry,
+    StaffNote,
+    TeacherLock,
+    TeacherRestriction,
+    WeeklyRule,
+    normalise,
+)
 from ..exports import export_csv, export_excel
 from ..models import TransferRequest, TransferType
 from ..optimizer import TransferEngine
-from ..repository import TimetableRepository
+from ..repository import BASELINE_SNAPSHOT_ID, TimetableRepository
 from .audit_tab import AuditTab
 from .constraints_tabs import LocksTab, RestrictionsTab, WeeklyRulesTab, set_constraint_options
 from .dashboard_tab import DashboardTab
 from .rebalance_tab import ANY_SCHOOL, TransferTab
 from .report_tabs import ChangeLogTab, MovementTab
+from .staff_tab import StaffTab
 from .theme import COLORS, configure_theme
 from .timetable_tab import TimetableTab
 
@@ -23,8 +33,8 @@ class TimetableApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Peripatetic Timetable Planner")
-        self.geometry("1540x920")
-        self.minsize(1160, 720)
+        self.geometry("1440x860")
+        self.minsize(1100, 700)
         configure_theme(self)
         self.repository = TimetableRepository()
         try:
@@ -36,12 +46,22 @@ class TimetableApp(tk.Tk):
                     "Working data could not be loaded", str(error)
                 )
             )
+        self._ensure_initial_snapshot()
         self.preview = None
         self.requests: list[TransferRequest] = []
         self.preview_changes = ()
+        self._prompted_incomplete_names: set[str] = set()
         self.pages: dict[str, ttk.Frame] = {}
         self._build()
         self.refresh_all()
+        self.after_idle(self._maximise_window)
+        self.after(600, self.prompt_for_incomplete_names)
+
+    def _maximise_window(self) -> None:
+        try:
+            self.state("zoomed")
+        except tk.TclError:
+            pass
 
     @property
     def active_timetable(self):
@@ -50,7 +70,7 @@ class TimetableApp(tk.Tk):
     def _build(self) -> None:
         self._build_header()
         self.notebook = ttk.Notebook(self)
-        self.notebook.pack(fill="both", expand=True, padx=12, pady=(10, 5))
+        self.notebook.pack(fill="both", expand=True, padx=6, pady=(5, 3))
 
         self.dashboard_tab = DashboardTab(self.notebook, self.open_page)
         self.timetable_tab = TimetableTab(self.notebook)
@@ -73,8 +93,17 @@ class TimetableApp(tk.Tk):
         self.rules_tab = WeeklyRulesTab(
             self.notebook, self.add_weekly_rule, self.delete_weekly_rule
         )
+        self.staff_tab = StaffTab(
+            self.notebook,
+            {
+                "save_note": self.save_staff_note,
+                "delete_note": self.delete_staff_note,
+                "rename_teacher": self.rename_teacher,
+                "remove_teacher": self.remove_teacher,
+            },
+        )
         self.movement_tab = MovementTab(self.notebook)
-        self.log_tab = ChangeLogTab(self.notebook)
+        self.log_tab = ChangeLogTab(self.notebook, self.restore_history_version)
         page_specs = (
             ("dashboard", self.dashboard_tab, "Overview"),
             ("timetable", self.timetable_tab, "Timetable"),
@@ -83,14 +112,15 @@ class TimetableApp(tk.Tk):
             ("restrictions", self.restrictions_tab, "Restrictions"),
             ("locks", self.locks_tab, "Locks"),
             ("rules", self.rules_tab, "Weekly rules"),
-            ("movement", self.movement_tab, "Teacher movement"),
+            ("staff", self.staff_tab, "Staff"),
+            ("movement", self.movement_tab, "Movement"),
             ("history", self.log_tab, "History"),
         )
         for key, page, title in page_specs:
             self.pages[key] = page
             self.notebook.add(page, text=title)
 
-        status_bar = tk.Frame(self, bg="#E1E7EC", height=30)
+        status_bar = tk.Frame(self, bg="#E1E7EC", height=24)
         status_bar.pack(fill="x", side="bottom")
         self.status = tk.Label(
             status_bar,
@@ -100,19 +130,19 @@ class TimetableApp(tk.Tk):
             anchor="w",
             font=("Segoe UI", 9),
         )
-        self.status.pack(fill="x", padx=14, pady=6)
+        self.status.pack(fill="x", padx=10, pady=3)
 
     def _build_header(self) -> None:
-        header = tk.Frame(self, bg=COLORS["navy"], height=78)
+        header = tk.Frame(self, bg=COLORS["navy"], height=64)
         header.pack(fill="x")
         title = tk.Frame(header, bg=COLORS["navy"])
-        title.pack(side="left", padx=20, pady=12)
+        title.pack(side="left", padx=16, pady=8)
         tk.Label(
             title,
             text="Peripatetic Timetable Planner",
             bg=COLORS["navy"],
             fg="white",
-            font=("Segoe UI Semibold", 20),
+            font=("Segoe UI Semibold", 18),
         ).pack(anchor="w")
         tk.Label(
             title,
@@ -122,7 +152,7 @@ class TimetableApp(tk.Tk):
             font=("Segoe UI", 9),
         ).pack(anchor="w")
         buttons = tk.Frame(header, bg=COLORS["navy"])
-        buttons.pack(side="right", padx=16, pady=17)
+        buttons.pack(side="right", padx=12, pady=12)
         ttk.Button(
             buttons,
             text="Restore 29 July baseline",
@@ -159,7 +189,14 @@ class TimetableApp(tk.Tk):
         active = self.active_timetable
         self.dashboard_tab.show(active)
         self.timetable_tab.show(active, self.preview is not None)
-        self.transfer_tab.set_options(self.timetable.teachers, self.timetable.school_names)
+        self.transfer_tab.set_options(
+            {
+                teacher: self.timetable.subjects_for_teacher(teacher)
+                for teacher in self.timetable.teachers
+            },
+            self.timetable.school_names,
+        )
+        self.update_transfer_sources()
         self.transfer_tab.show_requests(self.requests, self.timetable)
         set_constraint_options(
             (self.restrictions_tab, self.locks_tab, self.rules_tab),
@@ -169,9 +206,10 @@ class TimetableApp(tk.Tk):
         self.restrictions_tab.show(self.timetable.restrictions)
         self.locks_tab.show(self.timetable.locks)
         self.rules_tab.show(self.timetable.weekly_rules)
+        self.staff_tab.show(self.timetable)
         self.movement_tab.show(active)
         self.audit_tab.show(active)
-        self.log_tab.show(self.timetable)
+        self.log_tab.show(self.timetable, self.repository.list_snapshots())
         self.discard_button.configure(state="normal" if self.preview else "disabled")
         self.status.configure(
             text=(
@@ -182,7 +220,7 @@ class TimetableApp(tk.Tk):
         )
 
     def update_transfer_sources(self) -> None:
-        teacher = self.transfer_tab.teacher.get()
+        teacher = self.transfer_tab.selected_teacher()
         schools = tuple(
             school
             for school in self.timetable.school_names
@@ -191,7 +229,7 @@ class TimetableApp(tk.Tk):
         self.transfer_tab.set_source_options(schools)
 
     def add_request(self) -> None:
-        teacher = self.transfer_tab.teacher.get()
+        teacher = self.transfer_tab.selected_teacher()
         source = self.transfer_tab.source.get()
         type_text = self.transfer_tab.transfer_type.get()
         try:
@@ -261,27 +299,32 @@ class TimetableApp(tk.Tk):
             self.open_page("transfers")
             return
         self.preview, self.preview_changes = result.timetable, result.changes
-        details = "\n".join(
-            f"{change.note}\n   Reason: {change.rationale}" for change in result.changes
-        )
+        swap_count = len(result.changes)
+        request_count = len(self.requests)
         self.transfer_tab.show_result(
             result.changes,
-            f"SAFE PREVIEW READY\n\n{details}\n\nOptions checked: {result.explored_states}.",
+            "SAFE PREVIEW READY\n\n"
+            f"{swap_count} swap{'s' if swap_count != 1 else ''} satisfy "
+            f"{request_count} request{'s' if request_count != 1 else ''} and all active rules. "
+            "Review the table above, then apply or discard the preview.\n"
+            f"Options checked: {result.explored_states}.",
             True,
         )
         self.refresh_all()
-        self.open_page("timetable")
+        self.open_page("transfers")
+        self.status.configure(
+            text="Safe preview ready • review the proposed swaps, then apply or open Timetable"
+        )
 
     def apply_preview(self) -> None:
         if self.preview is None:
             return
-        next_number = sum(
-            entry.version.startswith("T") for entry in self.timetable.change_log
-        ) + 1
+        next_number = self._next_history_number("T")
+        version = f"T{next_number}"
         note = "Transfer plan: " + " | ".join(
             change.note for change in self.preview_changes
         )
-        self.preview.change_log.append(ChangeLogEntry(f"T{next_number}", note))
+        self.preview.change_log.append(ChangeLogEntry(version, note))
         try:
             self.repository.save(self.preview)
         except (OSError, ValueError) as exc:
@@ -289,6 +332,16 @@ class TimetableApp(tk.Tk):
             return
         self.timetable = self.preview
         self.preview, self.preview_changes, self.requests = None, (), []
+        try:
+            self.repository.save_snapshot(
+                self.timetable,
+                f"{version} approved transfer plan",
+            )
+        except (OSError, ValueError) as exc:
+            messagebox.showwarning(
+                "Timetable saved without a restore point",
+                f"The approved timetable was saved, but its dated restore point failed:\n{exc}",
+            )
         self.transfer_tab.show_result((), "Transfer plan applied and saved.", False)
         self.refresh_all()
         messagebox.showinfo(
@@ -301,6 +354,166 @@ class TimetableApp(tk.Tk):
             self.transfer_tab.show_result((), "No preview generated.", False)
         if hasattr(self, "dashboard_tab"):
             self.refresh_all()
+
+    def save_staff_note(self) -> None:
+        name, status, note = self.staff_tab.note_values()
+        if not name or not status:
+            messagebox.showwarning(
+                "Staffing note incomplete",
+                "Enter the person or post and its current status.",
+            )
+            return
+        updated = self.timetable.clone()
+        item = StaffNote(name, status, note)
+        index = self.staff_tab.selected_note_index()
+        if index is None:
+            updated.staff_notes.append(item)
+            action = f"Added staffing note for {name}."
+        else:
+            updated.staff_notes[index] = item
+            action = f"Updated staffing note for {name}."
+        if self._commit_staff_update(updated, action):
+            self.staff_tab.clear_note_form()
+
+    def prompt_for_incomplete_names(self) -> None:
+        for teacher in self.timetable.teachers:
+            if teacher_has_full_name(teacher) or teacher in self._prompted_incomplete_names:
+                continue
+            self._prompted_incomplete_names.add(teacher)
+            full_name = simpledialog.askstring(
+                "Full teacher name required",
+                f"{teacher} does not include both a first name and surname.\n\n"
+                "Enter the teacher's full name, or select Cancel to correct it later in Staff:",
+                initialvalue=f"{teacher} ",
+                parent=self,
+            )
+            if full_name is None:
+                continue
+            full_name = full_name.strip()
+            if not teacher_has_full_name(full_name):
+                messagebox.showwarning(
+                    "Full name still required",
+                    "Enter at least a first name and surname. The Audit warning will remain.",
+                )
+                continue
+            if any(
+                normalise(existing) == normalise(full_name)
+                for existing in self.timetable.teachers
+                if normalise(existing) != normalise(teacher)
+            ):
+                messagebox.showwarning(
+                    "Teacher already exists",
+                    "That full name already belongs to an active teacher.",
+                )
+                continue
+            updated = self.timetable.clone()
+            updated.rename_teacher(teacher, full_name)
+            self._commit_staff_update(updated, f"Renamed {teacher} to {full_name}.")
+
+    def delete_staff_note(self) -> None:
+        index = self.staff_tab.selected_note_index()
+        if index is None:
+            messagebox.showwarning("No note selected", "Select the staffing note to delete.")
+            return
+        item = self.timetable.staff_notes[index]
+        if not messagebox.askyesno(
+            "Delete staffing note",
+            f"Delete the staffing note for {item.name}?",
+        ):
+            return
+        updated = self.timetable.clone()
+        updated.staff_notes.pop(index)
+        if self._commit_staff_update(updated, f"Deleted staffing note for {item.name}."):
+            self.staff_tab.clear_note_form()
+
+    def rename_teacher(self) -> None:
+        current_name = self.staff_tab.teacher.get()
+        new_name = self.staff_tab.new_name.get().strip()
+        if not current_name or not new_name:
+            messagebox.showwarning(
+                "Teacher name incomplete",
+                "Select the current teacher and enter the new name.",
+            )
+            return
+        if normalise(current_name) == normalise(new_name):
+            messagebox.showwarning("Name unchanged", "Enter a different teacher name.")
+            return
+        if any(normalise(teacher) == normalise(new_name) for teacher in self.timetable.teachers):
+            messagebox.showwarning(
+                "Teacher already exists",
+                "That name already belongs to an active teacher. Names cannot be merged here.",
+            )
+            return
+        if not messagebox.askyesno(
+            "Rename teacher",
+            f"Rename {current_name} to {new_name} everywhere in the timetable?",
+        ):
+            return
+        updated = self.timetable.clone()
+        updated.rename_teacher(current_name, new_name)
+        if self._commit_staff_update(updated, f"Renamed {current_name} to {new_name}."):
+            self.staff_tab.clear_teacher_form()
+
+    def remove_teacher(self) -> None:
+        teacher = self.staff_tab.teacher.get()
+        if not teacher:
+            messagebox.showwarning("No teacher selected", "Select the teacher to remove.")
+            return
+        placements = self.timetable.assignments_for(teacher=teacher)
+        subjects = " / ".join(self.timetable.subjects_for_teacher(teacher))
+        if not messagebox.askyesno(
+            "Remove teacher from the college",
+            f"Remove {teacher} ({subjects}) and all {len(placements)} placements?\n\n"
+            "A staffing note will remain and this change can be recovered from History.",
+        ):
+            return
+        updated = self.timetable.clone()
+        updated.remove_teacher(teacher)
+        removal_note = f"Removed from the active timetable on {datetime.now():%d %b %Y}."
+        matching_index = next(
+            (
+                index
+                for index, item in enumerate(updated.staff_notes)
+                if normalise(item.name) == normalise(teacher)
+            ),
+            None,
+        )
+        if matching_index is None:
+            updated.staff_notes.append(StaffNote(teacher, "Left college", removal_note))
+        else:
+            existing = updated.staff_notes[matching_index]
+            combined_note = " ".join(value for value in (existing.note, removal_note) if value)
+            updated.staff_notes[matching_index] = StaffNote(
+                existing.name,
+                existing.status,
+                combined_note,
+            )
+        self._commit_staff_update(
+            updated,
+            f"Removed {teacher} ({subjects}) and {len(placements)} placements.",
+        )
+
+    def _commit_staff_update(self, updated, note: str) -> bool:
+        version = f"S{self._next_history_number('S')}"
+        updated.change_log.append(ChangeLogEntry(version, note))
+        try:
+            self.repository.save(updated)
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Could not save staff update", str(exc))
+            return False
+        self.timetable = updated
+        self.preview, self.preview_changes, self.requests = None, (), []
+        try:
+            self.repository.save_snapshot(updated, f"{version} staff update")
+        except (OSError, ValueError) as exc:
+            messagebox.showwarning(
+                "Staff update saved without a restore point",
+                f"The staff update was saved, but its dated restore point failed:\n{exc}",
+            )
+        self.refresh_all()
+        self.open_page("staff")
+        self.status.configure(text=note)
+        return True
 
     def add_restriction(self) -> None:
         teacher, school, days, reason = self.restrictions_tab.values()
@@ -387,20 +600,67 @@ class TimetableApp(tk.Tk):
         self.refresh_all()
         self.status.configure(text=message)
 
-    def restore_original(self) -> None:
+    def _ensure_initial_snapshot(self) -> None:
+        if not self.repository.working_file.exists() or self.repository.list_snapshots():
+            return
+        transfer_entries = [
+            entry.version for entry in self.timetable.change_log if entry.version.startswith("T")
+        ]
+        label = (
+            f"{transfer_entries[-1]} current approved timetable"
+            if transfer_entries
+            else "Current saved timetable"
+        )
+        try:
+            self.repository.save_snapshot(self.timetable, label)
+        except (OSError, ValueError):
+            pass
+
+    def _next_history_number(self, prefix: str) -> int:
+        versions = [entry.version for entry in self.timetable.change_log]
+        versions.extend(snapshot.label.split(maxsplit=1)[0] for snapshot in self.repository.list_snapshots())
+        numbers = [
+            int(version[len(prefix):])
+            for version in versions
+            if version.startswith(prefix) and version[len(prefix):].isdigit()
+        ]
+        return max(numbers, default=0) + 1
+
+    def restore_history_version(self, snapshot_id: str, display_label: str) -> None:
         if not messagebox.askyesno(
-            "Restore the 29 July baseline",
-            "This replaces the working copy, locks, restrictions, rules, and history. Continue?",
+            "Restore timetable version",
+            f"Restore {display_label}?\n\nYour current timetable will be preserved first.",
         ):
             return
         try:
-            self.timetable = self.repository.restore_baseline()
+            self.repository.save_snapshot(
+                self.timetable,
+                f"Preserved before restoring {display_label}",
+            )
+            restored = self.repository.load_snapshot(snapshot_id)
+            version = f"R{self._next_history_number('R')}"
+            restored.change_log.append(
+                ChangeLogEntry(version, f"Restored approved version: {display_label}")
+            )
+            self.repository.save(restored)
+            self.repository.save_snapshot(
+                restored,
+                f"{version} restored timetable",
+            )
         except (OSError, ValueError) as exc:
             messagebox.showerror("Could not restore", str(exc))
             return
+        self.timetable = restored
         self.preview, self.preview_changes, self.requests = None, (), []
         self.refresh_all()
-        self.status.configure(text="The verified 29 July baseline has been restored.")
+        self.open_page("history")
+        self.status.configure(text=f"Restored {display_label}; the previous timetable was preserved.")
+
+    def restore_original(self) -> None:
+        self.restore_history_version(
+            BASELINE_SNAPSHOT_ID,
+            "29 Jul 2026 — Original verified baseline",
+        )
 
     def export_csv_file(self) -> None:
         path = filedialog.asksaveasfilename(
