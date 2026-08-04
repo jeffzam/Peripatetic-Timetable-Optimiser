@@ -320,21 +320,31 @@ class TimetableApp(tk.Tk):
         )
 
     def add_lock(self) -> None:
-        teacher, day, school = self.locks_tab.values()
-        if not teacher or not day or not school:
+        teacher, days = self.locks_tab.values()
+        if not teacher or not days:
             messagebox.showwarning(
-                "Lock incomplete", "Select a teacher, day, and school."
+                "Lock incomplete", "Select a teacher and at least one day."
             )
             return
-        if school not in self.timetable.schools_for_teacher(teacher, day):
+        new_locks = []
+        invalid_days = []
+        for day in days:
+            schools = self.timetable.schools_for_teacher(teacher, day)
+            if len(schools) != 1:
+                invalid_days.append(day)
+                continue
+            lock = TeacherLock(teacher, day, schools[0])
+            if lock not in self.timetable.locks:
+                new_locks.append(lock)
+        if invalid_days:
             messagebox.showwarning(
-                "Invalid lock", f"{teacher} is not assigned to {school} on {day}."
+                "Some days cannot be locked",
+                f"{teacher} does not have one clear school on {', '.join(invalid_days)}.",
             )
-            return
-        item = TeacherLock(teacher, day, school)
-        if item not in self.timetable.locks:
-            self.timetable.locks.append(item)
-            self._save_constraints("Placement locked.")
+        if new_locks:
+            self.timetable.locks.extend(new_locks)
+            self.locks_tab.clear_days()
+            self._save_constraints(f"Added {len(new_locks)} placement lock(s).")
 
     def delete_lock(self) -> None:
         self._delete_constraint(self.locks_tab, self.timetable.locks, "Lock removed.")

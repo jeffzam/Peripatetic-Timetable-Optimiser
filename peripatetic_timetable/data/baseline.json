@@ -530,7 +530,7 @@
     },
     {
       "school": "Bahrija",
-      "day": "Thursday",
+      "day": "Wednesday",
       "subject": "PE/RSP",
       "teacher": "Alisichia",
       "baseline": true
@@ -728,6 +728,10 @@
     {
       "version": "1.0",
       "note": "Canonical baseline verified against the 29 July 2026 Word timetable."
+    },
+    {
+      "version": "1.1",
+      "note": "Corrected source reading: Alisichia serves Bahrija on Tuesday, Wednesday and Friday, and Rabat on Monday and Thursday."
     }
   ]
 }

@@ -22,7 +22,36 @@ class TimetableRepository:
         errors = timetable.validate()
         if errors:
             raise ValueError("Invalid timetable data:\n" + "\n".join(errors))
+        migrated = self._apply_migrations(timetable)
+        if migrated and source == self.working_file:
+            self.save(timetable)
         return timetable
+
+    @staticmethod
+    def _apply_migrations(timetable: Timetable) -> bool:
+        """Apply narrow, evidence-backed corrections to older working copies."""
+        old_rows = timetable.assignments_for(
+            teacher="Alisichia", school="Bahrija", day="Thursday", subject="PE/RSP"
+        )
+        corrected_rows = timetable.assignments_for(
+            teacher="Alisichia", school="Bahrija", day="Wednesday", subject="PE/RSP"
+        )
+        if not old_rows or corrected_rows:
+            return False
+        for assignment in old_rows:
+            assignment.day = "Wednesday"
+            assignment.baseline = True
+        if not any(entry.version == "1.1" for entry in timetable.change_log):
+            from .domain import ChangeLogEntry
+
+            timetable.change_log.append(
+                ChangeLogEntry(
+                    "1.1",
+                    "Corrected source reading: Alisichia serves Bahrija on Tuesday, "
+                    "Wednesday and Friday, and Rabat on Monday and Thursday.",
+                )
+            )
+        return True
 
     def load_baseline(self) -> Timetable:
         with self.baseline_file.open(encoding="utf-8") as handle:

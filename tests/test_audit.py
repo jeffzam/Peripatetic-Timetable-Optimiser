@@ -9,13 +9,10 @@ class AuditTests(unittest.TestCase):
     def setUp(self):
         self.timetable = TimetableRepository().load_baseline()
 
-    def test_source_conflict_and_missing_day_are_visible(self):
+    def test_corrected_baseline_has_complete_daily_coverage(self):
         issues = audit_timetable(self.timetable)
-        codes = {(item.code, item.teacher, item.day) for item in issues}
-        self.assertIn(("DOUBLE_BOOKED", "Alisichia", "Thursday"), codes)
-        self.assertTrue(
-            any(item.code == "MISSING_DAY" and item.teacher == "Alisichia" for item in issues)
-        )
+        self.assertFalse(any(item.code == "DOUBLE_BOOKED" for item in issues))
+        self.assertFalse(any(item.code == "MISSING_DAY" for item in issues))
 
     def test_pe_rsp_capacity_formula(self):
         self.assertEqual(DEFAULT_POLICY.required_pe_rsp_days(6), 2)

@@ -18,13 +18,12 @@ The canonical data was verified against **Time table 29th July .doc** for the
 - Finds subject-compatible counterpart teachers and explains every proposed swap.
 - Treats PE and PE/RSP as compatible for transfer-cover purposes.
 - Checks PE/RSP educator-day capacity from school class totals.
-- Supports fixed teacher/day/school locks, excluded schools, and weekly frequency rules.
+- Supports multi-day or all-week teacher locks, excluded schools, and weekly frequency rules.
 - Generates a preview before any change can be saved.
 - Exports the timetable, teacher movement, audit, and history to Excel or CSV.
 
-The source timetable currently contains one visible exception: Alisichia is listed
-in both Baħrija and Rabat on Thursday and has no school on Wednesday. The application
-shows this rather than silently changing the source document.
+Alisichia's source allocation is Baħrija on Tuesday, Wednesday and Friday, and Rabat
+on Monday and Thursday.
 
 ## Run
 
