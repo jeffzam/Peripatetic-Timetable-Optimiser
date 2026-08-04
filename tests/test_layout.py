@@ -1,6 +1,7 @@
 import unittest
 
-from peripatetic_timetable.presentation.timetable_view import calculate_layout
+from peripatetic_timetable.domain import School
+from peripatetic_timetable.presentation.timetable_view import TimetableCanvas, calculate_layout
 
 
 class TimetableLayoutTests(unittest.TestCase):
@@ -31,6 +32,9 @@ class TimetableLayoutTests(unittest.TestCase):
         self.assertGreater(layout.row_heights[5], layout.row_heights[4])
         self.assertEqual(layout.row_heights[5], layout.row_heights[0])
 
+    def test_classes_cell_shows_only_the_total(self):
+        school = School("Attard", 20, "Yr 1 - 3\nYr 2 - 4")
+        self.assertEqual(TimetableCanvas._compact_classes(school), "20 classes")
 
 if __name__ == "__main__":
     unittest.main()

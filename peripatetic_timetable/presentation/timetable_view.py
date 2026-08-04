@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import tkinter as tk
 from dataclasses import dataclass
 from tkinter import font as tkfont
@@ -44,7 +43,7 @@ def calculate_layout(
     margin = 2.0
     usable_width = max(1.0, width - (margin * 2))
     school_width = max(72.0, min(112.0, usable_width * 0.075))
-    classes_width = max(92.0, min(132.0, usable_width * 0.09))
+    classes_width = max(76.0, min(104.0, usable_width * 0.07))
     day_width = max(1.0, (usable_width - school_width - classes_width) / len(DAYS))
     header_height = max(28.0, min(40.0, height * 0.075))
     body_height = max(1.0, height - (margin * 2) - header_height)
@@ -161,7 +160,8 @@ class TimetableCanvas(ttk.Frame):
                 self._compact_classes(school),
                 COLORS["ink"],
                 font_size=layout.body_font_size,
-                anchor="nw",
+                bold=True,
+                anchor="center",
             )
             x += layout.widths[1]
             for index, assignments in enumerate(daily):
@@ -182,13 +182,7 @@ class TimetableCanvas(ttk.Frame):
 
     @staticmethod
     def _compact_classes(school: School) -> str:
-        values: list[str] = []
-        for line in school.breakdown.splitlines():
-            match = re.search(r"Yr\s*(\d+)\s*[-–]\s*(\d+)", line.strip())
-            if match:
-                values.append(f"Y{match.group(1)}:{match.group(2)}")
-        grouped = [" · ".join(values[index : index + 3]) for index in range(0, len(values), 3)]
-        return "\n".join([f"{school.classes} classes", *grouped])
+        return f"{school.classes} classes"
 
     def _assignment_cell(
         self,
