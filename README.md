@@ -30,6 +30,9 @@ on Monday and Thursday.
 Python 3.10 or newer is required. Its optional **Tcl/Tk and IDLE** component must
 also be installed for the desktop interface.
 
+For the simplest Windows start, open the project folder and double-click
+`START PLANNER.bat`.
+
 ```text
 python -m pip install -r requirements.txt
 python run.py
