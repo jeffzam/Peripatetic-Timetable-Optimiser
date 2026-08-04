@@ -1,0 +1,710 @@
+{
+  "schools": [
+    {
+      "name": "Attard",
+      "classes": 20,
+      "breakdown": "Yr 1 - 3\nYr 2 - 4\nYr 3 - 4\nYr 4 - 3\nYr 5 - 3\nYr 6 - 3"
+    },
+    {
+      "name": "Dingli",
+      "classes": 12,
+      "breakdown": "Yr 1 - 1\nYr 2 - 2\nYr 3 - 2\nYr 4 - 3\nYr 5 - 2\nYr 6 - 2"
+    },
+    {
+      "name": "Mtarfa",
+      "classes": 6,
+      "breakdown": "Yr 1 - 1\nYr 2 - 1\nYr 3 - 1\nYr 4 - 1\nYr 5 - 1\nYr 6 - 1"
+    },
+    {
+      "name": "Mgarr",
+      "classes": 18,
+      "breakdown": "Yr 1 - 3\nYr 2 - 3\nYr 3 - 3\nYr 4 - 3\nYr 5 - 3\nYr 6 - 3"
+    },
+    {
+      "name": "Bahrija",
+      "classes": 6,
+      "breakdown": "Yr 1 - 1\nYr 2 - 1\nYr 3 - 1\nYr 4 - 1\nYr 5 - 1\nYr 6 - 1"
+    },
+    {
+      "name": "Rabat",
+      "classes": 18,
+      "breakdown": "Yr 1 - 3\nYr 2 - 3\nYr 3 - 3\nYr 4 - 3\nYr 5 - 3\nYr 6 - 3"
+    }
+  ],
+  "assignments": [
+    {
+      "school": "Attard",
+      "day": "Monday",
+      "subject": "PE",
+      "teacher": "Rebecca Bonello",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Monday",
+      "subject": "Art",
+      "teacher": "Ruth Borg Galea",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Monday",
+      "subject": "Music",
+      "teacher": "Bruno Gomez",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Monday",
+      "subject": "PE/RSP",
+      "teacher": "Melanie Mercieca",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Tuesday",
+      "subject": "PSCD",
+      "teacher": "Elisa Vassallo",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Tuesday",
+      "subject": "PSCD",
+      "teacher": "Zenobia Fsadni",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Tuesday",
+      "subject": "PE",
+      "teacher": "Rebecca Bonello",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Tuesday",
+      "subject": "Art",
+      "teacher": "Ruth Borg Galea",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Tuesday",
+      "subject": "Music",
+      "teacher": "Bruno Gomez",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Tuesday",
+      "subject": "PE/RSP",
+      "teacher": "Melanie Mercieca",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Wednesday",
+      "subject": "Art",
+      "teacher": "Ruth Borg Galea",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Wednesday",
+      "subject": "Music",
+      "teacher": "Bruno Gomez",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Wednesday",
+      "subject": "PE",
+      "teacher": "Rebecca Bonello",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Thursday",
+      "subject": "PSCD",
+      "teacher": "Elisa Vassallo",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Thursday",
+      "subject": "PSCD",
+      "teacher": "Zenobia Fsadni",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Thursday",
+      "subject": "Art",
+      "teacher": "Ruth Borg Galea",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Thursday",
+      "subject": "PE",
+      "teacher": "Rebecca Bonello",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Thursday",
+      "subject": "Music",
+      "teacher": "Bruno Gomez",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Thursday",
+      "subject": "PE/RSP",
+      "teacher": "Melanie Mercieca",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Friday",
+      "subject": "PSCD",
+      "teacher": "Elisa Vassallo",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Friday",
+      "subject": "PSCD",
+      "teacher": "Zenobia Fsadni",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Friday",
+      "subject": "PE",
+      "teacher": "Rebecca Bonello",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Friday",
+      "subject": "Art",
+      "teacher": "Ruth Borg Galea",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Friday",
+      "subject": "Music",
+      "teacher": "Bruno Gomez",
+      "baseline": true
+    },
+    {
+      "school": "Attard",
+      "day": "Friday",
+      "subject": "PE/RSP",
+      "teacher": "Melanie Mercieca",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Monday",
+      "subject": "PE/RSP",
+      "teacher": "Kirsty Aquilina",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Monday",
+      "subject": "Art",
+      "teacher": "Denis Mompalao",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Monday",
+      "subject": "Music",
+      "teacher": "Andrew Bugeja",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Tuesday",
+      "subject": "PE/RSP",
+      "teacher": "Kirsty Aquilina",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Wednesday",
+      "subject": "PSCD",
+      "teacher": "Elisa Vassallo",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Wednesday",
+      "subject": "PSCD",
+      "teacher": "Zenobia Fsadni",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Wednesday",
+      "subject": "Music",
+      "teacher": "Andrew Bugeja",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Wednesday",
+      "subject": "Art",
+      "teacher": "Denis Mompalao",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Wednesday",
+      "subject": "PE/RSP",
+      "teacher": "Kirsty Aquilina",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Thursday",
+      "subject": "Art",
+      "teacher": "Denis Mompalao",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Thursday",
+      "subject": "Music",
+      "teacher": "Andrew Bugeja",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Thursday",
+      "subject": "PE/RSP",
+      "teacher": "Kirsty Aquilina",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Friday",
+      "subject": "PE/RSP",
+      "teacher": "Kirsty Aquilina",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Friday",
+      "subject": "Music",
+      "teacher": "Andrew Bugeja",
+      "baseline": true
+    },
+    {
+      "school": "Dingli",
+      "day": "Friday",
+      "subject": "Art",
+      "teacher": "Denis Mompalao",
+      "baseline": true
+    },
+    {
+      "school": "Mtarfa",
+      "day": "Monday",
+      "subject": "PSCD",
+      "teacher": "Zenobia Fsadni",
+      "baseline": true
+    },
+    {
+      "school": "Mtarfa",
+      "day": "Tuesday",
+      "subject": "Art",
+      "teacher": "Denis Mompalao",
+      "baseline": true
+    },
+    {
+      "school": "Mtarfa",
+      "day": "Tuesday",
+      "subject": "Music",
+      "teacher": "Giovanni Giglio",
+      "baseline": true
+    },
+    {
+      "school": "Mtarfa",
+      "day": "Tuesday",
+      "subject": "PE/RSP",
+      "teacher": "Emily Scerri",
+      "baseline": true
+    },
+    {
+      "school": "Mtarfa",
+      "day": "Wednesday",
+      "subject": "PE/RSP",
+      "teacher": "Emily Scerri",
+      "baseline": true
+    },
+    {
+      "school": "Mtarfa",
+      "day": "Friday",
+      "subject": "PE/RSP",
+      "teacher": "Emily Scerri",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Monday",
+      "subject": "Art",
+      "teacher": "Alexia Vella Schembri",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Monday",
+      "subject": "PSCD",
+      "teacher": "Matthew Ellul",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Monday",
+      "subject": "PSCD",
+      "teacher": "Maria Falzon",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Monday",
+      "subject": "PE/RSP",
+      "teacher": "Daryl Micallef",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Monday",
+      "subject": "Music",
+      "teacher": "Giovanni Giglio",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Monday",
+      "subject": "PE/RSP",
+      "teacher": "Emily Scerri",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Tuesday",
+      "subject": "PSCD",
+      "teacher": "Maria Falzon",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Tuesday",
+      "subject": "PSCD",
+      "teacher": "Matthew Ellul",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Tuesday",
+      "subject": "PE/RSP",
+      "teacher": "Daryl Micallef",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Wednesday",
+      "subject": "PE/RSP",
+      "teacher": "Daryl Micallef",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Wednesday",
+      "subject": "Art",
+      "teacher": "Andrew Borg",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Wednesday",
+      "subject": "Music",
+      "teacher": "Giovanni Giglio",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Wednesday",
+      "subject": "PE/RSP",
+      "teacher": "Melanie Mercieca",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Thursday",
+      "subject": "Music",
+      "teacher": "Giovanni Giglio",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Thursday",
+      "subject": "PE/RSP",
+      "teacher": "Daryl Micallef",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Thursday",
+      "subject": "PE/RSP",
+      "teacher": "Emily Scerri",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Thursday",
+      "subject": "Art",
+      "teacher": "Andrew Borg",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Friday",
+      "subject": "Music",
+      "teacher": "Giovanni Giglio",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Friday",
+      "subject": "PE/RSP",
+      "teacher": "Daryl Micallef",
+      "baseline": true
+    },
+    {
+      "school": "Mgarr",
+      "day": "Friday",
+      "subject": "Art",
+      "teacher": "Alexia Vella Schembri",
+      "baseline": true
+    },
+    {
+      "school": "Bahrija",
+      "day": "Monday",
+      "subject": "PSCD",
+      "teacher": "Elisa Vassallo",
+      "baseline": true
+    },
+    {
+      "school": "Bahrija",
+      "day": "Tuesday",
+      "subject": "Music",
+      "teacher": "Andrew Bugeja",
+      "baseline": true
+    },
+    {
+      "school": "Bahrija",
+      "day": "Tuesday",
+      "subject": "PE/RSP",
+      "teacher": "Alisichia",
+      "baseline": true
+    },
+    {
+      "school": "Bahrija",
+      "day": "Tuesday",
+      "subject": "Art",
+      "teacher": "Alexia Vella Schembri",
+      "baseline": true
+    },
+    {
+      "school": "Bahrija",
+      "day": "Thursday",
+      "subject": "PE/RSP",
+      "teacher": "Alisichia",
+      "baseline": true
+    },
+    {
+      "school": "Bahrija",
+      "day": "Friday",
+      "subject": "PE/RSP",
+      "teacher": "Alisichia",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Monday",
+      "subject": "Art",
+      "teacher": "Andrew Borg",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Monday",
+      "subject": "Music",
+      "teacher": "M. Cam Borg",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Monday",
+      "subject": "PE/RSP",
+      "teacher": "Jaime Muscat",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Monday",
+      "subject": "PE/RSP",
+      "teacher": "Alisichia",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Tuesday",
+      "subject": "Music",
+      "teacher": "M. Cam Borg",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Tuesday",
+      "subject": "PE/RSP",
+      "teacher": "Jaime Muscat",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Tuesday",
+      "subject": "Art",
+      "teacher": "Andrew Borg",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Wednesday",
+      "subject": "PSCD",
+      "teacher": "Maria Falzon",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Wednesday",
+      "subject": "PSCD",
+      "teacher": "Matthew Ellul",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Wednesday",
+      "subject": "Music",
+      "teacher": "M. Cam Borg",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Wednesday",
+      "subject": "PE/RSP",
+      "teacher": "Jaime Muscat",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Wednesday",
+      "subject": "Art",
+      "teacher": "Alexia Vella Schembri",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Thursday",
+      "subject": "PSCD",
+      "teacher": "Maria Falzon",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Thursday",
+      "subject": "PSCD",
+      "teacher": "Matthew Ellul",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Thursday",
+      "subject": "PE/RSP",
+      "teacher": "Jaime Muscat",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Thursday",
+      "subject": "Music",
+      "teacher": "M. Cam Borg",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Thursday",
+      "subject": "PE/RSP",
+      "teacher": "Alisichia",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Thursday",
+      "subject": "Art",
+      "teacher": "Alexia Vella Schembri",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Friday",
+      "subject": "Music",
+      "teacher": "M. Cam Borg",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Friday",
+      "subject": "PSCD",
+      "teacher": "Maria Falzon",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Friday",
+      "subject": "PSCD",
+      "teacher": "Matthew Ellul",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Friday",
+      "subject": "Art",
+      "teacher": "Andrew Borg",
+      "baseline": true
+    },
+    {
+      "school": "Rabat",
+      "day": "Friday",
+      "subject": "PE/RSP",
+      "teacher": "Jaime Muscat",
+      "baseline": true
+    }
+  ],
+  "locks": [],
+  "teacher_restrictions": [],
+  "weekly_rules": [],
+  "change_log": [
+    {
+      "version": "1.0",
+      "note": "Canonical baseline imported from uploaded timetable."
+    }
+  ]
+}

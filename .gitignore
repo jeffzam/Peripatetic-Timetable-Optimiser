@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.xlsx
+*.csv
+*.log
+user_data.json
+copilot.exe
+*.zip
+peripatetic_timetable_v2_6_1_audit_restrictions_restore_engine_package/
+
