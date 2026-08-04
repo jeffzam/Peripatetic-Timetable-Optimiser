@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "peripatetic-timetable-optimiser"
-version = "3.0.0"
-description = "Desktop timetable rebalancing tool for peripatetic teachers"
+version = "2.0.0"
+description = "Professional desktop transfer planner for peripatetic teachers"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["openpyxl>=3.1,<4"]
@@ -18,4 +18,3 @@ peripatetic_timetable = ["data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

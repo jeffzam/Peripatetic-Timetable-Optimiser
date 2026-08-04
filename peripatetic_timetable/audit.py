@@ -1,23 +1,105 @@
+"""Explainable timetable checks."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+
 from .config import DAYS
+from .domain import Timetable
+from .policy import DEFAULT_POLICY, PE_FAMILY, SchedulingPolicy
 
-def teacher_movement(data: dict) -> dict[str, dict[str, str]]:
-    teachers = sorted({item["teacher"] for item in data["assignments"]})
-    result = {teacher: {day: "" for day in DAYS} for teacher in teachers}
-    for item in data["assignments"]:
-        current = result[item["teacher"]][item["day"]]
-        if not current:
-            result[item["teacher"]][item["day"]] = item["school"]
-        elif item["school"] not in current.split(", "):
-            result[item["teacher"]][item["day"]] += f", {item['school']}"
-    return result
 
-def coverage_audit(data: dict) -> list[dict]:
-    rows = []
-    for teacher, schedule in teacher_movement(data).items():
-        assigned = [day for day in DAYS if schedule[day]]
-        missing = [day for day in DAYS if not schedule[day]]
-        schools = sorted({school for value in schedule.values() for school in value.split(", ") if school})
-        rows.append({"teacher": teacher, "days_count": len(assigned), "assigned_days": assigned,
-                     "missing_days": missing, "schools": schools,
-                     "status": "OK" if not missing else "MISSING DAYS"})
-    return rows
+class Severity(str, Enum):
+    ERROR = "Error"
+    WARNING = "Warning"
+    INFO = "Information"
+
+
+@dataclass(frozen=True)
+class AuditIssue:
+    severity: Severity
+    code: str
+    title: str
+    detail: str
+    teacher: str = ""
+    school: str = ""
+    day: str = ""
+
+
+def audit_timetable(
+    timetable: Timetable, policy: SchedulingPolicy = DEFAULT_POLICY
+) -> list[AuditIssue]:
+    issues: list[AuditIssue] = []
+    for error in timetable.validate():
+        issues.append(AuditIssue(Severity.ERROR, "STRUCTURE", "Invalid data", error))
+
+    for (teacher, day), schools in timetable.assignment_conflicts().items():
+        issues.append(
+            AuditIssue(
+                Severity.ERROR,
+                "DOUBLE_BOOKED",
+                "Teacher is in two schools",
+                f"{teacher} is assigned to {', '.join(schools)} on {day}.",
+                teacher=teacher,
+                day=day,
+            )
+        )
+
+    for teacher in timetable.teachers:
+        missing = tuple(day for day in DAYS if not timetable.schools_for_teacher(teacher, day))
+        if missing:
+            issues.append(
+                AuditIssue(
+                    Severity.WARNING,
+                    "MISSING_DAY",
+                    "Teacher has an unassigned day",
+                    f"{teacher} has no school on {', '.join(missing)}.",
+                    teacher=teacher,
+                )
+            )
+
+    for school in timetable.schools:
+        pe_rsp = [
+            item
+            for item in timetable.assignments_for(school=school.name)
+            if item.subject in PE_FAMILY
+        ]
+        actual_days = len({(item.teacher, item.day) for item in pe_rsp})
+        required_days = policy.required_pe_rsp_days(school.classes)
+        if actual_days < required_days:
+            issues.append(
+                AuditIssue(
+                    Severity.ERROR,
+                    "PE_RSP_CAPACITY",
+                    "PE/RSP staffing is below demand",
+                    f"{school.name} has {actual_days} educator-days; policy requires "
+                    f"at least {required_days} for {school.classes} classes.",
+                    school=school.name,
+                )
+            )
+        educators = {item.teacher for item in pe_rsp}
+        if (
+            school.classes >= policy.large_school_threshold
+            and len(educators) < policy.minimum_large_school_educators
+        ):
+            issues.append(
+                AuditIssue(
+                    Severity.WARNING,
+                    "PE_RSP_RESILIENCE",
+                    "Large school depends on too few PE/RSP educators",
+                    f"{school.name} has {len(educators)} PE/RSP educator; policy target is "
+                    f"{policy.minimum_large_school_educators}.",
+                    school=school.name,
+                )
+            )
+    return issues
+
+
+def issue_counts(timetable: Timetable) -> dict[str, int]:
+    issues = audit_timetable(timetable)
+    return {
+        "errors": sum(item.severity == Severity.ERROR for item in issues),
+        "warnings": sum(item.severity == Severity.WARNING for item in issues),
+        "issues": len(issues),
+    }

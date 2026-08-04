@@ -1,32 +1,61 @@
+"""Transfer-planning request and result models."""
+
+from __future__ import annotations
+
 from dataclasses import dataclass
+from enum import Enum
+
+from .domain import Timetable
+
+
+class TransferType(str, Enum):
+    FULL = "Full transfer"
+    PARTIAL = "Partial transfer"
+
 
 @dataclass(frozen=True)
-class RebalanceRequest:
+class TransferRequest:
     teacher: str
-    day: str
+    source_school: str
+    transfer_type: TransferType
+    days: tuple[str, ...] = ()
+    preferred_school: str = ""
     excluded_schools: tuple[str, ...] = ()
 
+
 @dataclass(frozen=True)
-class Change:
+class AppliedChange:
     request_number: int
     teacher: str
     day: str
     source_school: str
     target_school: str
     swap_teacher: str
+    score: int
+    rationale: str
 
     @property
     def note(self) -> str:
-        return (f"{self.request_number}. {self.teacher}: {self.source_school} -> "
-                f"{self.target_school} on {self.day}; {self.swap_teacher}: "
-                f"{self.target_school} -> {self.source_school}.")
+        return (
+            f"{self.request_number}. {self.teacher}: {self.source_school} → "
+            f"{self.target_school}; {self.swap_teacher}: {self.target_school} → "
+            f"{self.source_school} ({self.day})."
+        )
+
 
 @dataclass(frozen=True)
-class BatchResult:
-    data: dict | None
-    changes: tuple[Change, ...] = ()
+class TransferCandidate:
+    timetable: Timetable
+    change: AppliedChange
+
+
+@dataclass(frozen=True)
+class TransferResult:
+    timetable: Timetable | None
+    changes: tuple[AppliedChange, ...] = ()
     error: str = ""
+    explored_states: int = 0
 
     @property
     def succeeded(self) -> bool:
-        return self.data is not None
+        return self.timetable is not None
