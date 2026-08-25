@@ -7,7 +7,7 @@ approved starting timetable.
 The canonical data was verified against **Time table 29th July .doc** for the
 2026/2027 scholastic year. The application always works on a separate local copy.
 
-## What version 2.1 does
+## What version 2.1.1 does
 
 - Presents the six-school timetable in a clear school-by-day grid.
 - Fits every school and weekday on screen, gives busy schools more row space, and colour-codes subjects.
@@ -40,7 +40,8 @@ Python 3.10 or newer is required. Its optional **Tcl/Tk and IDLE** component mus
 also be installed for the desktop interface.
 
 For the simplest Windows start, open the project folder and double-click
-`START PLANNER.bat`.
+`START PLANNER.bat`. On the first start it automatically installs the declared
+Excel-export support if it is missing.
 
 ```text
 python -m pip install -r requirements.txt

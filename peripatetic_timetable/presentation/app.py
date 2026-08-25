@@ -690,10 +690,16 @@ class TimetableApp(tk.Tk):
             export_excel(self.active_timetable, path)
         except ImportError:
             messagebox.showerror(
-                "Excel support missing", "Install the packages listed in requirements.txt."
+                "Excel support missing",
+                "Close the planner and double-click START PLANNER.bat. It will install "
+                "the required Excel support automatically.",
             )
             return
         except OSError as exc:
             messagebox.showerror("Could not export Excel", str(exc))
             return
+        messagebox.showinfo(
+            "Excel export complete",
+            f"The timetable was exported successfully to:\n\n{path}",
+        )
         self.status.configure(text=f"Excel workbook exported to {path}")
