@@ -38,7 +38,7 @@ def export_excel(timetable: Timetable, path: str | Path) -> None:
         cell.fill, cell.font, cell.border = navy, white_bold, border
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
     for row_number, school in enumerate(timetable.schools, 4):
-        values = [school.name, f"{school.classes} classes\n{school.breakdown}"]
+        values = [school.name, f"{school.classes} classes"]
         for day in DAYS:
             values.append("\n".join(
                 f"{item.subject} — {item.teacher}"
@@ -50,8 +50,12 @@ def export_excel(timetable: Timetable, path: str | Path) -> None:
             cell.alignment = Alignment(vertical="top", wrap_text=True)
             if column == 1:
                 cell.fill, cell.font = pale_blue, Font(bold=True)
-        sheet.row_dimensions[row_number].height = 105
-    for column, width in enumerate([20, 22, 32, 32, 32, 32, 32], 1):
+        busiest_day = max(
+            len(timetable.assignments_for(school=school.name, day=day))
+            for day in DAYS
+        )
+        sheet.row_dimensions[row_number].height = max(45, busiest_day * 18)
+    for column, width in enumerate([20, 16, 32, 32, 32, 32, 32], 1):
         sheet.column_dimensions[get_column_letter(column)].width = width
     sheet.freeze_panes = "C4"
 

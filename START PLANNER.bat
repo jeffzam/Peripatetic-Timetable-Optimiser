@@ -13,8 +13,25 @@ if not defined PLANNER_PYTHONW (
 
 if not defined PLANNER_PYTHONW goto python_missing
 
+for %%F in ("%PLANNER_PYTHONW%") do set "PLANNER_PYTHON=%%~dpFpython.exe"
+if not exist "%PLANNER_PYTHON%" goto python_missing
+
+"%PLANNER_PYTHON%" -c "import openpyxl" >nul 2>&1
+if errorlevel 1 (
+    echo Preparing Excel support for the Peripatetic Timetable Planner...
+    "%PLANNER_PYTHON%" -m pip install -r "%~dp0requirements.txt"
+    if errorlevel 1 goto dependency_missing
+)
+
 start "" "%PLANNER_PYTHONW%" "%~dp0run.py"
 exit /b 0
+
+:dependency_missing
+echo.
+echo Excel support could not be installed.
+echo Check the internet connection, then double-click START PLANNER again.
+pause
+exit /b 1
 
 :python_missing
 echo Python could not be found on this computer.
