@@ -17,6 +17,39 @@ def export_excel(timetable: Timetable, path: str | Path) -> None:
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.page import PageMargins
+
+    def configure_a4_landscape(
+        worksheet,
+        *,
+        fit_to_height: int,
+        print_area: str | None = None,
+        repeat_header_rows: str | None = None,
+        center_vertically: bool = False,
+    ) -> None:
+        """Apply predictable, printer-friendly settings to an exported sheet."""
+        worksheet.page_setup.orientation = worksheet.ORIENTATION_LANDSCAPE
+        worksheet.page_setup.paperSize = worksheet.PAPERSIZE_A4
+        worksheet.page_setup.scale = None
+        worksheet.page_setup.fitToWidth = 1
+        worksheet.page_setup.fitToHeight = fit_to_height
+        worksheet.sheet_properties.pageSetUpPr.fitToPage = True
+        worksheet.sheet_properties.pageSetUpPr.autoPageBreaks = False
+        worksheet.page_margins = PageMargins(
+            left=0.2,
+            right=0.2,
+            top=0.35,
+            bottom=0.35,
+            header=0.1,
+            footer=0.1,
+        )
+        worksheet.print_options.horizontalCentered = True
+        worksheet.print_options.verticalCentered = center_vertically
+        worksheet.sheet_view.showGridLines = False
+        if print_area is not None:
+            worksheet.print_area = print_area
+        if repeat_header_rows is not None:
+            worksheet.print_title_rows = repeat_header_rows
 
     workbook = Workbook()
     sheet = workbook.active
@@ -58,6 +91,13 @@ def export_excel(timetable: Timetable, path: str | Path) -> None:
     for column, width in enumerate([20, 16, 32, 32, 32, 32, 32], 1):
         sheet.column_dimensions[get_column_letter(column)].width = width
     sheet.freeze_panes = "C4"
+    last_timetable_row = 3 + len(timetable.schools)
+    configure_a4_landscape(
+        sheet,
+        fit_to_height=1,
+        print_area=f"A1:G{last_timetable_row}",
+        center_vertically=True,
+    )
 
     movement = workbook.create_sheet("Teacher Movement")
     movement.append(["Teacher", *DAYS])
@@ -103,4 +143,9 @@ def export_excel(timetable: Timetable, path: str | Path) -> None:
             letter = get_column_letter(column_cells[0].column)
             maximum = max(len(str(cell.value or "")) for cell in column_cells)
             worksheet.column_dimensions[letter].width = min(max(maximum + 2, 12), 55)
+        configure_a4_landscape(
+            worksheet,
+            fit_to_height=0,
+            repeat_header_rows="1:1",
+        )
     workbook.save(path)

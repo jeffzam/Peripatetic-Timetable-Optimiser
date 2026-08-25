@@ -7,7 +7,7 @@ approved starting timetable.
 The canonical data was verified against **Time table 29th July .doc** for the
 2026/2027 scholastic year. The application always works on a separate local copy.
 
-## What version 2.1.1 does
+## What version 2.1.2 does
 
 - Presents the six-school timetable in a clear school-by-day grid.
 - Fits every school and weekday on screen, gives busy schools more row space, and colour-codes subjects.
@@ -30,6 +30,8 @@ The canonical data was verified against **Time table 29th July .doc** for the
 - Renames teachers consistently across placements and rules, or removes departed teachers safely.
 - Wraps staffing notes on Overview so the complete update remains readable.
 - Exports the timetable, teacher movement, audit, and history to Excel or CSV.
+- Prints the Excel timetable on one A4 landscape page, with supporting reports
+  kept one page wide for readable printing.
 
 Alisichia's source allocation is Baħrija on Tuesday, Wednesday and Friday, and Rabat
 on Monday and Thursday.
