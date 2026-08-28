@@ -1,14 +1,25 @@
 import unittest
+from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from openpyxl import load_workbook
 
-from peripatetic_timetable.exports import export_excel
+from peripatetic_timetable.exports import available_export_copy, export_excel
 from peripatetic_timetable.repository import TimetableRepository
 
 
 class ExcelExportTests(unittest.TestCase):
+    def test_locked_export_uses_a_unique_dated_copy_name(self):
+        with TemporaryDirectory() as directory:
+            selected = Path(directory) / "peripatetic_timetable.xlsx"
+            expected = Path(directory) / "peripatetic_timetable_2026-08-28_133700.xlsx"
+            expected.touch()
+            self.assertEqual(
+                available_export_copy(selected, datetime(2026, 8, 28, 13, 37)),
+                Path(directory) / "peripatetic_timetable_2026-08-28_133700_2.xlsx",
+            )
+
     def test_excel_export_contains_all_reports_and_complete_timetable(self):
         timetable = TimetableRepository().load_baseline()
         with TemporaryDirectory() as directory:

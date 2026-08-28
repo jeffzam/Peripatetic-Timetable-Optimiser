@@ -150,6 +150,49 @@ class Timetable:
         ]
         return changed
 
+    def add_teacher(
+        self,
+        teacher: str,
+        subject: str,
+        placements: dict[str, str],
+    ) -> int:
+        """Add a new teacher and one school placement for every weekday."""
+        clean_name = teacher.strip()
+        clean_subject = subject.strip()
+        if not clean_name:
+            raise ValueError("Enter the new teacher's full name.")
+        if any(normalise(item) == normalise(clean_name) for item in self.teachers):
+            raise ValueError(f"{clean_name} is already an active teacher.")
+        if not clean_subject:
+            raise ValueError("Choose the new teacher's subject.")
+
+        missing_days = [day for day in DAYS if not placements.get(day, "").strip()]
+        if missing_days:
+            raise ValueError(
+                "Choose a school for every weekday. Missing: " + ", ".join(missing_days) + "."
+            )
+
+        canonical_subject = (
+            "PE/RSP" if normalise(clean_subject) in {"pe", "pe/rsp"} else clean_subject
+        )
+        new_assignments: list[Assignment] = []
+        for day in DAYS:
+            selected_school = self.school(placements[day])
+            if selected_school is None:
+                raise ValueError(f"Unknown school '{placements[day]}' for {day}.")
+            new_assignments.append(
+                Assignment(
+                    school=selected_school.name,
+                    day=day,
+                    subject=canonical_subject,
+                    teacher=clean_name,
+                    baseline=False,
+                )
+            )
+
+        self.assignments.extend(new_assignments)
+        return len(new_assignments)
+
     def remove_teacher(self, teacher: str) -> int:
         """Remove a departed teacher's placements and teacher-specific rules."""
         teacher_key = normalise(teacher)

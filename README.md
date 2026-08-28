@@ -7,7 +7,7 @@ approved starting timetable.
 The canonical data was verified against **Time table 29th July .doc** for the
 2026/2027 scholastic year. The application always works on a separate local copy.
 
-## What version 2.1.2 does
+## What version 2.3.0 does
 
 - Presents the six-school timetable in a clear school-by-day grid.
 - Fits every school and weekday on screen, gives busy schools more row space, and colour-codes subjects.
@@ -24,14 +24,27 @@ The canonical data was verified against **Time table 29th July .doc** for the
 - Supports multi-day or all-week teacher locks, excluded schools, and weekly frequency rules.
 - Filters the transfer teacher list by subject and displays each teacher's subject beside their name.
 - Generates a preview before any change can be saved.
+- Creates an **emergency timetable** when one educator is on sick leave or resigns.
+- Filters unavailable educators by subject and requires an explicit unavailable tick.
+- Automatically considers every same-subject daily reassignment across the college.
+- Shares unavoidable reduced cover across schools and colleagues instead of repeatedly
+  disadvantaging the same school.
+- Preserves locks, restrictions, weekly rules, one-school-per-day safety, and PE/RSP capacity
+  wherever the available staffing makes that possible.
+- Shows every reassignment and any remaining uncovered subject-day before approval.
+- Saves the timetable from immediately before an emergency as a dated restore point.
 - Saves a dated local restore point whenever an approved transfer plan is applied.
 - Restores the original baseline or any dated approval without discarding the timetable being replaced.
 - Adds, edits, and deletes staffing updates from a dedicated Staff page.
+- Adds genuinely new teachers when staffing increases, including their subject and
+  school placement for every weekday, without replacing existing staff.
 - Renames teachers consistently across placements and rules, or removes departed teachers safely.
 - Wraps staffing notes on Overview so the complete update remains readable.
 - Exports the timetable, teacher movement, audit, and history to Excel or CSV.
 - Prints the Excel timetable on one A4 landscape page, with supporting reports
   kept one page wide for readable printing.
+- Saves a uniquely dated Excel copy automatically when the selected workbook is
+  already open and locked by Excel.
 
 Alisichia's source allocation is Baħrija on Tuesday, Wednesday and Friday, and Rabat
 on Monday and Thursday.

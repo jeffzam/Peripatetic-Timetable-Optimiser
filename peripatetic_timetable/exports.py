@@ -1,10 +1,24 @@
 import csv
+from datetime import datetime
 from pathlib import Path
 
 from .audit import audit_timetable
 from .config import DAYS
 from .domain import Timetable
 from .reports import coverage_report, movement_matrix
+
+
+def available_export_copy(path: str | Path, exported_at: datetime | None = None) -> Path:
+    """Return a unique nearby filename when the selected workbook is locked."""
+    selected = Path(path)
+    timestamp = (exported_at or datetime.now()).strftime("%Y-%m-%d_%H%M%S")
+    base = selected.with_name(f"{selected.stem}_{timestamp}{selected.suffix}")
+    candidate = base
+    counter = 2
+    while candidate.exists():
+        candidate = base.with_name(f"{base.stem}_{counter}{base.suffix}")
+        counter += 1
+    return candidate
 
 def export_csv(timetable: Timetable, path: str | Path) -> None:
     with Path(path).open("w", newline="", encoding="utf-8-sig") as handle:
