@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from peripatetic_timetable.config import BASELINE_FILE
+from peripatetic_timetable.config import BASELINE_FILE, DAYS
 from peripatetic_timetable.domain import TeacherLock, Timetable, WeeklyRule, normalise
 from peripatetic_timetable.reports import coverage_report
 from peripatetic_timetable.repository import BASELINE_SNAPSHOT_ID, TimetableRepository
@@ -111,6 +111,59 @@ class DomainTests(unittest.TestCase):
         self.assertNotIn("Rebecca Bonello", self.timetable.teachers)
         self.assertFalse(self.timetable.locks)
         self.assertFalse(self.timetable.weekly_rules)
+
+    def test_add_teacher_increases_staff_without_replacing_anyone(self):
+        original_teachers = set(self.timetable.teachers)
+        placements = {day: "Attard" for day in DAYS}
+        added = self.timetable.add_teacher("Jane Example", "Art", placements)
+        self.assertEqual(added, 5)
+        self.assertEqual(set(self.timetable.teachers), original_teachers | {"Jane Example"})
+        assignments = self.timetable.assignments_for(teacher="Jane Example")
+        self.assertEqual(len(assignments), 5)
+        self.assertEqual({item.day for item in assignments}, set(DAYS))
+        self.assertEqual({item.school for item in assignments}, {"Attard"})
+        self.assertEqual({item.subject for item in assignments}, {"Art"})
+        self.assertTrue(all(not item.baseline for item in assignments))
+        self.assertEqual(self.timetable.assignment_conflicts(), {})
+        coverage = next(
+            item for item in coverage_report(self.timetable) if item.teacher == "Jane Example"
+        )
+        self.assertEqual(coverage.status, "Complete")
+        self.assertEqual(coverage.missing_days, ())
+
+    def test_add_teacher_accepts_a_different_school_each_day(self):
+        placements = dict(zip(DAYS, self.timetable.school_names[:5]))
+        self.timetable.add_teacher("John Example", "Music", placements)
+        self.assertEqual(
+            [self.timetable.current_school("John Example", day) for day in DAYS],
+            list(self.timetable.school_names[:5]),
+        )
+
+    def test_add_teacher_requires_a_complete_week_and_is_atomic(self):
+        original = self.timetable.to_dict()
+        with self.assertRaisesRegex(ValueError, "Friday"):
+            self.timetable.add_teacher(
+                "Jane Example",
+                "Art",
+                {day: "Attard" for day in DAYS if day != "Friday"},
+            )
+        self.assertEqual(self.timetable.to_dict(), original)
+
+    def test_add_teacher_rejects_duplicate_name(self):
+        with self.assertRaisesRegex(ValueError, "already an active teacher"):
+            self.timetable.add_teacher(
+                "rebecca bonello",
+                "Art",
+                {day: "Attard" for day in DAYS},
+            )
+
+    def test_add_teacher_standardises_pe_label(self):
+        self.timetable.add_teacher(
+            "Peter Example",
+            "PE",
+            {day: "Rabat" for day in DAYS},
+        )
+        self.assertEqual(self.timetable.subjects_for_teacher("Peter Example"), ("PE/RSP",))
 
 if __name__ == "__main__":
     unittest.main()

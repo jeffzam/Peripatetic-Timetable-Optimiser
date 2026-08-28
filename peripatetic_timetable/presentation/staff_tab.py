@@ -22,8 +22,8 @@ class StaffTab(ttk.Frame):
         ttk.Label(
             intro,
             text=(
-                "Rename active teachers everywhere in the timetable, remove departed staff, "
-                "and keep the staffing updates shown on Overview current."
+                "Add staff when the college grows, rename active teachers, remove departed "
+                "staff, and keep the staffing updates shown on Overview current."
             ),
             style="Muted.TLabel",
         ).pack(anchor="w", pady=(3, 0))
@@ -42,9 +42,17 @@ class StaffTab(ttk.Frame):
         self._build_notes(notes)
 
     def _build_teachers(self, parent) -> None:
-        ttk.Label(parent, text="Active teacher directory", style="Section.TLabel").pack(
-            anchor="w"
+        heading = ttk.Frame(parent, style="Card.TFrame")
+        heading.pack(fill="x")
+        ttk.Label(heading, text="Active teacher directory", style="Section.TLabel").pack(
+            side="left"
         )
+        ttk.Button(
+            heading,
+            text="Add new teacher",
+            style="Success.TButton",
+            command=self.callbacks["add_teacher"],
+        ).pack(side="right")
         form = ttk.Frame(parent, style="Card.TFrame")
         form.pack(fill="x", pady=(8, 8))
         ttk.Label(form, text="Teacher", style="Field.TLabel").grid(row=0, column=0, sticky="w")

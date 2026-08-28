@@ -7,6 +7,7 @@ from datetime import datetime
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from ..audit import teacher_has_full_name
+from ..config import DAYS
 from ..domain import (
     ChangeLogEntry,
     StaffNote,
@@ -15,13 +16,16 @@ from ..domain import (
     WeeklyRule,
     normalise,
 )
-from ..exports import export_csv, export_excel
+from ..emergency import EmergencyEngine, EmergencyReason
+from ..exports import available_export_copy, export_csv, export_excel
 from ..models import TransferRequest, TransferType
 from ..optimizer import TransferEngine
 from ..repository import BASELINE_SNAPSHOT_ID, TimetableRepository
 from .audit_tab import AuditTab
 from .constraints_tabs import LocksTab, RestrictionsTab, WeeklyRulesTab, set_constraint_options
 from .dashboard_tab import DashboardTab
+from .emergency_tab import EmergencyTab
+from .new_teacher_dialog import ask_new_teacher
 from .rebalance_tab import ANY_SCHOOL, TransferTab
 from .report_tabs import ChangeLogTab, MovementTab
 from .staff_tab import StaffTab
@@ -48,8 +52,11 @@ class TimetableApp(tk.Tk):
             )
         self._ensure_initial_snapshot()
         self.preview = None
+        self.preview_kind = ""
         self.requests: list[TransferRequest] = []
         self.preview_changes = ()
+        self.emergency_teacher = ""
+        self.emergency_reason = EmergencyReason.SICK_LEAVE
         self._prompted_incomplete_names: set[str] = set()
         self.pages: dict[str, ttk.Frame] = {}
         self._build()
@@ -85,6 +92,15 @@ class TimetableApp(tk.Tk):
                 "teacher_changed": self.update_transfer_sources,
             },
         )
+        self.emergency_tab = EmergencyTab(
+            self.notebook,
+            {
+                "generate": self.generate_emergency_preview,
+                "apply": self.apply_emergency_preview,
+                "plan_another": self.plan_another_emergency_teacher,
+                "selection_changed": self.emergency_selection_changed,
+            },
+        )
         self.audit_tab = AuditTab(self.notebook)
         self.restrictions_tab = RestrictionsTab(
             self.notebook, self.add_restriction, self.delete_restriction
@@ -98,6 +114,7 @@ class TimetableApp(tk.Tk):
             {
                 "save_note": self.save_staff_note,
                 "delete_note": self.delete_staff_note,
+                "add_teacher": self.add_teacher,
                 "rename_teacher": self.rename_teacher,
                 "remove_teacher": self.remove_teacher,
             },
@@ -108,6 +125,7 @@ class TimetableApp(tk.Tk):
             ("dashboard", self.dashboard_tab, "Overview"),
             ("timetable", self.timetable_tab, "Timetable"),
             ("transfers", self.transfer_tab, "Transfer planner"),
+            ("emergency", self.emergency_tab, "Emergency"),
             ("audit", self.audit_tab, "Audit"),
             ("restrictions", self.restrictions_tab, "Restrictions"),
             ("locks", self.locks_tab, "Locks"),
@@ -146,7 +164,9 @@ class TimetableApp(tk.Tk):
         ).pack(anchor="w")
         tk.Label(
             title,
-            text="St Nicholas College  •  2026/2027  •  safe, explainable transfer planning",
+            text=(
+                "St Nicholas College  •  2026/2027  •  safe transfer and emergency planning"
+            ),
             bg=COLORS["navy"],
             fg="#CCDBE5",
             font=("Segoe UI", 9),
@@ -196,6 +216,12 @@ class TimetableApp(tk.Tk):
             },
             self.timetable.school_names,
         )
+        self.emergency_tab.set_options(
+            {
+                teacher: self.timetable.subjects_for_teacher(teacher)
+                for teacher in self.timetable.teachers
+            }
+        )
         self.update_transfer_sources()
         self.transfer_tab.show_requests(self.requests, self.timetable)
         set_constraint_options(
@@ -213,7 +239,9 @@ class TimetableApp(tk.Tk):
         self.discard_button.configure(state="normal" if self.preview else "disabled")
         self.status.configure(
             text=(
-                "Preview active — review the highlighted placements before applying"
+                "Emergency preview active — review the highlighted timetable before applying"
+                if self.preview_kind == "emergency"
+                else "Transfer preview active — review the highlighted placements before applying"
                 if self.preview
                 else "Working copy saved locally • source baseline remains protected"
             )
@@ -268,7 +296,7 @@ class TimetableApp(tk.Tk):
         )
         if request not in self.requests:
             self.requests.append(request)
-        self.preview, self.preview_changes = None, ()
+        self.preview, self.preview_kind, self.preview_changes = None, "", ()
         self.transfer_tab.reset_builder()
         self.transfer_tab.show_requests(self.requests, self.timetable)
         self.status.configure(text="Transfer request added to the planning queue.")
@@ -277,19 +305,19 @@ class TimetableApp(tk.Tk):
         index = self.transfer_tab.selected_request_index()
         if index is not None:
             self.requests.pop(index)
-            self.preview, self.preview_changes = None, ()
+            self.preview, self.preview_kind, self.preview_changes = None, "", ()
             self.refresh_all()
 
     def clear_requests(self) -> None:
         self.requests.clear()
-        self.preview, self.preview_changes = None, ()
+        self.preview, self.preview_kind, self.preview_changes = None, "", ()
         self.transfer_tab.show_result((), "No preview generated.", False)
         self.refresh_all()
 
     def generate_preview(self) -> None:
         result = TransferEngine(self.timetable).solve(self.requests)
         if not result.succeeded:
-            self.preview, self.preview_changes = None, ()
+            self.preview, self.preview_kind, self.preview_changes = None, "", ()
             self.transfer_tab.show_result(
                 (),
                 f"PLAN BLOCKED\n\n{result.error}\n\nOptions checked: {result.explored_states}",
@@ -298,7 +326,9 @@ class TimetableApp(tk.Tk):
             self.refresh_all()
             self.open_page("transfers")
             return
-        self.preview, self.preview_changes = result.timetable, result.changes
+        self.preview = result.timetable
+        self.preview_kind = "transfer"
+        self.preview_changes = result.changes
         swap_count = len(result.changes)
         request_count = len(self.requests)
         self.transfer_tab.show_result(
@@ -316,8 +346,172 @@ class TimetableApp(tk.Tk):
             text="Safe preview ready • review the proposed swaps, then apply or open Timetable"
         )
 
+    def generate_emergency_preview(self) -> None:
+        teacher = self.emergency_tab.selected_teacher()
+        if not teacher:
+            messagebox.showwarning(
+                "No educator selected", "Select the educator who is unavailable."
+            )
+            return
+        if not self.emergency_tab.confirmed.get():
+            messagebox.showwarning(
+                "Educator not marked unavailable",
+                "Tick the unavailable educator before generating the emergency timetable.",
+            )
+            return
+
+        reason = self.emergency_tab.selected_reason()
+        result = EmergencyEngine(self.timetable).solve(teacher)
+        if not result.succeeded:
+            self.preview, self.preview_kind, self.preview_changes = None, "", ()
+            self.emergency_teacher = ""
+            self.emergency_tab.show_result(
+                (),
+                f"EMERGENCY PLAN BLOCKED\n\n{result.error}\n\n"
+                f"Complete plans checked: {result.explored_plans}.",
+                False,
+            )
+            self.refresh_all()
+            self.open_page("emergency")
+            return
+
+        self.preview = result.timetable
+        self.preview_kind = "emergency"
+        self.preview_changes = result.changes
+        self.emergency_teacher = result.unavailable_teacher
+        self.emergency_reason = reason
+        self.transfer_tab.show_result((), "No preview generated.", False)
+        moved = sum(bool(change.cover_teacher) for change in result.changes)
+        warning_text = (
+            "\n\nCover warnings:\n• " + "\n• ".join(result.warnings)
+            if result.warnings
+            else "\n\nAll affected days retain at least one compatible educator at every school."
+        )
+        self.emergency_tab.show_result(
+            result.changes,
+            "EMERGENCY PREVIEW READY\n\n"
+            f"{result.unavailable_teacher} is removed from the preview. "
+            f"{moved} same-subject reassignment{'s' if moved != 1 else ''} spread the "
+            "reduced cover across the week. Review the table and the highlighted timetable "
+            "before applying."
+            f"{warning_text}\n\nComplete plans checked: {result.explored_plans}.",
+            True,
+        )
+        self.refresh_all()
+        self.open_page("emergency")
+        self.status.configure(
+            text="Emergency preview ready • review it on Emergency and Timetable before applying"
+        )
+
+    def emergency_selection_changed(self) -> None:
+        if self.preview_kind != "emergency":
+            return
+        self.preview, self.preview_kind, self.preview_changes = None, "", ()
+        self.emergency_teacher = ""
+        self.emergency_tab.show_result(
+            (), "Selection changed — generate a new emergency preview.", False
+        )
+        self.refresh_all()
+        self.open_page("emergency")
+
+    def plan_another_emergency_teacher(self) -> None:
+        """Discard the current emergency draft and clear its educator selection."""
+        if self.preview_kind == "emergency":
+            self.preview, self.preview_kind, self.preview_changes = None, "", ()
+        self.emergency_teacher = ""
+        self.emergency_reason = EmergencyReason.SICK_LEAVE
+        self.refresh_all()
+        self.emergency_tab.prepare_another_teacher()
+        self.open_page("emergency")
+        self.status.configure(
+            text="Emergency planner cleared • select and tick another unavailable educator"
+        )
+
+    def apply_emergency_preview(self) -> None:
+        if self.preview is None or self.preview_kind != "emergency":
+            return
+        if not messagebox.askyesno(
+            "Apply emergency timetable",
+            f"Save this emergency timetable for {self.emergency_teacher} "
+            f"({self.emergency_reason.value})?\n\n"
+            "The current saved timetable will be kept as a dated restore point.",
+        ):
+            return
+
+        version = f"E{self._next_history_number('E')}"
+        plan_note = " | ".join(change.note for change in self.preview_changes)
+        note = (
+            f"Emergency timetable for {self.emergency_teacher} "
+            f"({self.emergency_reason.value}): {plan_note}"
+        )
+        self.preview.change_log.append(ChangeLogEntry(version, note))
+        absence_note = f"Emergency timetable applied on {datetime.now():%d %b %Y}."
+        status = (
+            "Sick leave"
+            if self.emergency_reason == EmergencyReason.SICK_LEAVE
+            else "Left college"
+        )
+        matching_index = next(
+            (
+                index
+                for index, item in enumerate(self.preview.staff_notes)
+                if normalise(item.name) == normalise(self.emergency_teacher)
+            ),
+            None,
+        )
+        if matching_index is None:
+            self.preview.staff_notes.append(
+                StaffNote(self.emergency_teacher, status, absence_note)
+            )
+        else:
+            existing = self.preview.staff_notes[matching_index]
+            combined = " ".join(value for value in (existing.note, absence_note) if value)
+            self.preview.staff_notes[matching_index] = StaffNote(
+                existing.name, status, combined
+            )
+
+        try:
+            self.repository.save_snapshot(
+                self.timetable,
+                f"Before {version} emergency timetable for {self.emergency_teacher}",
+            )
+            self.repository.save(self.preview)
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Could not save emergency timetable", str(exc))
+            return
+        self.timetable = self.preview
+        applied_teacher = self.emergency_teacher
+        applied_reason = self.emergency_reason
+        self.preview, self.preview_kind, self.preview_changes = None, "", ()
+        self.emergency_teacher = ""
+        self.requests.clear()
+        try:
+            self.repository.save_snapshot(
+                self.timetable,
+                f"{version} approved emergency timetable",
+            )
+        except (OSError, ValueError) as exc:
+            messagebox.showwarning(
+                "Emergency timetable saved without a final restore point",
+                f"The pre-emergency restore point is safe, but the final restore point failed:\n{exc}",
+            )
+        self.refresh_all()
+        self.emergency_tab.show_result(
+            (),
+            f"{version} emergency timetable applied for {applied_teacher} "
+            f"({applied_reason.value}).",
+            False,
+        )
+        self.open_page("emergency")
+        self.status.configure(text=f"{version} emergency timetable saved locally")
+        messagebox.showinfo(
+            "Emergency timetable applied",
+            "The emergency timetable is now active. The previous timetable is available "
+            "from History when the educator returns or if the plan must be reversed.",
+        )
+
     def apply_preview(self) -> None:
-        if self.preview is None:
+        if self.preview is None or self.preview_kind != "transfer":
             return
         next_number = self._next_history_number("T")
         version = f"T{next_number}"
@@ -331,7 +525,7 @@ class TimetableApp(tk.Tk):
             messagebox.showerror("Could not save", str(exc))
             return
         self.timetable = self.preview
-        self.preview, self.preview_changes, self.requests = None, (), []
+        self.preview, self.preview_kind, self.preview_changes, self.requests = None, "", (), []
         try:
             self.repository.save_snapshot(
                 self.timetable,
@@ -349,9 +543,12 @@ class TimetableApp(tk.Tk):
         )
 
     def discard_preview(self) -> None:
-        self.preview, self.preview_changes = None, ()
+        self.preview, self.preview_kind, self.preview_changes = None, "", ()
+        self.emergency_teacher = ""
         if hasattr(self, "transfer_tab"):
             self.transfer_tab.show_result((), "No preview generated.", False)
+        if hasattr(self, "emergency_tab"):
+            self.emergency_tab.reset()
         if hasattr(self, "dashboard_tab"):
             self.refresh_all()
 
@@ -425,6 +622,40 @@ class TimetableApp(tk.Tk):
         updated.staff_notes.pop(index)
         if self._commit_staff_update(updated, f"Deleted staffing note for {item.name}."):
             self.staff_tab.clear_note_form()
+
+    def add_teacher(self) -> None:
+        subjects = tuple(
+            sorted({item.subject for item in self.timetable.assignments}, key=str.casefold)
+        )
+        details = ask_new_teacher(
+            self,
+            tuple(self.timetable.school_names),
+            subjects,
+            tuple(self.timetable.teachers),
+        )
+        if details is None:
+            return
+        updated = self.timetable.clone()
+        try:
+            added = updated.add_teacher(details.name, details.subject, details.placements)
+        except ValueError as exc:
+            messagebox.showwarning("Could not add teacher", str(exc))
+            return
+        subject = updated.subjects_for_teacher(details.name)[0]
+        placement_summary = ", ".join(
+            f"{day[:3]} {details.placements[day]}" for day in DAYS
+        )
+        note = (
+            f"Added {details.name} ({subject}) as additional staff with {added} placements: "
+            f"{placement_summary}."
+        )
+        if self._commit_staff_update(updated, note):
+            messagebox.showinfo(
+                "Teacher added",
+                f"{details.name} has been added as additional {subject} staff.\n\n"
+                "The teacher now appears in the timetable, transfer planner, Emergency page, "
+                "rules, locks, and movement report.",
+            )
 
     def rename_teacher(self) -> None:
         current_name = self.staff_tab.teacher.get()
@@ -502,7 +733,7 @@ class TimetableApp(tk.Tk):
             messagebox.showerror("Could not save staff update", str(exc))
             return False
         self.timetable = updated
-        self.preview, self.preview_changes, self.requests = None, (), []
+        self.preview, self.preview_kind, self.preview_changes, self.requests = None, "", (), []
         try:
             self.repository.save_snapshot(updated, f"{version} staff update")
         except (OSError, ValueError) as exc:
@@ -591,7 +822,7 @@ class TimetableApp(tk.Tk):
             self._save_constraints(message)
 
     def _save_constraints(self, message: str) -> None:
-        self.preview, self.preview_changes = None, ()
+        self.preview, self.preview_kind, self.preview_changes = None, "", ()
         try:
             self.repository.save(self.timetable)
         except (OSError, ValueError) as exc:
@@ -651,7 +882,7 @@ class TimetableApp(tk.Tk):
             messagebox.showerror("Could not restore", str(exc))
             return
         self.timetable = restored
-        self.preview, self.preview_changes, self.requests = None, (), []
+        self.preview, self.preview_kind, self.preview_changes, self.requests = None, "", (), []
         self.refresh_all()
         self.open_page("history")
         self.status.configure(text=f"Restored {display_label}; the previous timetable was preserved.")
@@ -694,6 +925,21 @@ class TimetableApp(tk.Tk):
                 "Close the planner and double-click START PLANNER.bat. It will install "
                 "the required Excel support automatically.",
             )
+            return
+        except PermissionError:
+            alternate_path = available_export_copy(path)
+            try:
+                export_excel(self.active_timetable, alternate_path)
+            except OSError as exc:
+                messagebox.showerror("Could not export Excel", str(exc))
+                return
+            messagebox.showinfo(
+                "Excel export complete",
+                "The selected workbook is open in Excel, so it could not be replaced. "
+                "A new copy was saved instead:\n\n"
+                f"{alternate_path}",
+            )
+            self.status.configure(text=f"Excel workbook exported to {alternate_path}")
             return
         except OSError as exc:
             messagebox.showerror("Could not export Excel", str(exc))
